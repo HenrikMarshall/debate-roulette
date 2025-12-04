@@ -743,8 +743,12 @@
                 });
 
                 socket.on('turn-change', ({ currentSpeaker, phase }) => {
-                    console.log('Turn changed:', currentSpeaker, phase);
-                    startTurn(false); // Remote's turn
+                    console.log('Turn changed - Current speaker:', currentSpeaker);
+                    console.log('My socket ID:', socket.id);
+                    // Check if it's now OUR turn or opponent's turn
+                    const isMyTurn = (currentSpeaker === socket.id);
+                    console.log('Is my turn?', isMyTurn);
+                    startTurn(isMyTurn);
                 });
 
                 socket.on('open-debate-start', () => {
@@ -917,10 +921,15 @@
 
         // Turn Management
         function startTurn(isYourTurn) {
+            console.log('=== START TURN ===');
+            console.log('isYourTurn:', isYourTurn);
+            console.log('My socket ID:', socket.id);
+            
             isLocalTurn = isYourTurn;
             timeRemaining = 30;
             
             if (isYourTurn) {
+                console.log('Setting up: I AM SPEAKING');
                 // Your turn to speak
                 localVideoWrapper.classList.add('speaking');
                 localVideoWrapper.classList.remove('muted');
@@ -943,6 +952,7 @@
                 
                 updateTimer(true);
             } else {
+                console.log('Setting up: OPPONENT IS SPEAKING');
                 // Opponent's turn
                 remoteVideoWrapper.classList.add('speaking');
                 remoteVideoWrapper.classList.remove('muted');
@@ -986,8 +996,9 @@
                 if (timeRemaining <= 0) {
                     clearInterval(timerInterval);
                     
+                    // Send turn-completed to server (for both local and remote turns)
+                    // Only the person whose turn it is should send this
                     if (isLocal) {
-                        // Your turn ended, notify server
                         socket.emit('turn-completed', { debateId: currentDebate });
                     }
                 }
