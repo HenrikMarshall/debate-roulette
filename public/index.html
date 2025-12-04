@@ -634,6 +634,7 @@
         let isLocalTurn = false;
         let yourSide = '';
         let currentRound = 1;
+        let lastTurnChangeTime = 0;
         
         // Emoji reaction state
         let emojiCounts = {
@@ -921,6 +922,14 @@
 
         // Turn Management
         function startTurn(isYourTurn) {
+            // Prevent duplicate calls within 500ms
+            const now = Date.now();
+            if (now - lastTurnChangeTime < 500) {
+                console.log('⚠️ Ignoring duplicate startTurn call (too soon)');
+                return;
+            }
+            lastTurnChangeTime = now;
+            
             console.log('=== START TURN ===');
             console.log('isYourTurn:', isYourTurn);
             console.log('My socket ID:', socket.id);
