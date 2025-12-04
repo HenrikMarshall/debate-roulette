@@ -541,7 +541,7 @@
         </div>
 
         <div class="topic-container">
-            <div class="topic-label">Today's Debate Topic</div>
+            <div class="topic-label">Round <span id="roundNumber">1</span> • Today's Debate Topic</div>
             <div id="topic">Click "Find Opponent" to receive a random debate topic</div>
         </div>
 
@@ -633,6 +633,7 @@
         let timerInterval = null;
         let isLocalTurn = false;
         let yourSide = '';
+        let currentRound = 1;
         
         // Emoji reaction state
         let emojiCounts = {
@@ -656,6 +657,7 @@
         const localVideoWrapper = document.getElementById('localVideoWrapper');
         const remoteVideoWrapper = document.getElementById('remoteVideoWrapper');
         const emojiBar = document.getElementById('emojiBar');
+        const roundNumber = document.getElementById('roundNumber');
 
         // Initialize
         async function init() {
@@ -751,7 +753,12 @@
 
                 socket.on('topic-changed', (data) => {
                     yourSide = data.yourSide;
+                    currentRound++;
+                    roundNumber.textContent = currentRound;
                     topicElement.textContent = `${data.topic} (You are: ${data.yourSide})`;
+                    
+                    // Reset emoji counts for new round
+                    resetEmojiCounts();
                     
                     if (timerInterval) clearInterval(timerInterval);
                     
@@ -809,6 +816,31 @@
             overlay.style.display = 'none';
             
             connectionStatus.textContent = 'Connected! Setting up video...';
+        }
+
+        // New topic countdown
+        async function startNewTopicCountdown() {
+            const overlay = document.getElementById('countdownOverlay');
+            const numberEl = document.getElementById('countdownNumber');
+            const textEl = overlay.querySelector('.countdown-text');
+            
+            overlay.style.display = 'flex';
+            textEl.textContent = 'New Topic In...';
+            
+            for (let i = 3; i > 0; i--) {
+                numberEl.textContent = i;
+                numberEl.style.animation = 'none';
+                
+                void numberEl.offsetWidth;
+                numberEl.style.animation = 'countdownPulse 1s ease-in-out';
+                
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            overlay.style.display = 'none';
+            
+            // Request new topic from server
+            socket.emit('request-new-topic', { debateId: currentDebate });
         }
 
         // WebRTC Setup
@@ -874,6 +906,9 @@
                 debateId: currentDebate,
                 answer: answer
             });
+
+            // Start listening turn (opponent goes first)
+            startTurn(false);
         }
 
         async function handleAnswer(answer) {
@@ -969,9 +1004,6 @@
             remoteVideoWrapper.querySelector('.status-indicator').textContent = 'OPEN DEBATE';
             remoteVideoWrapper.querySelector('.status-indicator').classList.add('active');
             
-            localTimer.textContent = '∞';
-            remoteTimer.textContent = '∞';
-            
             // UNMUTE REMOTE AUDIO FOR OPEN DEBATE
             remoteVideo.muted = false;
             remoteVideo.volume = 1.0;
@@ -982,6 +1014,31 @@
             }
             
             connectionStatus.textContent = 'Open debate - both sides can speak freely!';
+            
+            // Start 30-second open debate timer
+            timeRemaining = 30;
+            localTimer.textContent = timeRemaining + 's';
+            remoteTimer.textContent = timeRemaining + 's';
+            
+            timerInterval = setInterval(() => {
+                timeRemaining--;
+                localTimer.textContent = timeRemaining + 's';
+                remoteTimer.textContent = timeRemaining + 's';
+                
+                if (timeRemaining <= 5) {
+                    localTimer.classList.add('warning');
+                    remoteTimer.classList.add('warning');
+                } else {
+                    localTimer.classList.remove('warning');
+                    remoteTimer.classList.remove('warning');
+                }
+                
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    // Start new topic countdown
+                    startNewTopicCountdown();
+                }
+            }, 1000);
         }
 
         // Button handlers
@@ -1010,6 +1067,10 @@
             
             // Hide emoji bar
             emojiBar.style.display = 'none';
+            
+            // Reset round counter
+            currentRound = 1;
+            roundNumber.textContent = currentRound;
             
             // Clear remote video
             remoteVideo.srcObject = null;

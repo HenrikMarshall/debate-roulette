@@ -246,6 +246,41 @@ io.on('connection', (socket) => {
         });
     });
 
+    // Request new topic (after open debate ends)
+    socket.on('request-new-topic', ({ debateId }) => {
+        const debate = activeDebates.get(debateId);
+        if (!debate) return;
+
+        const newTopic = getRandomTopic();
+        debate.topic = newTopic;
+
+        // Re-assign sides
+        const user1Side = getRandomSide();
+        const user2Side = user1Side === 'PRO' ? 'CON' : 'PRO';
+        debate.user1Side = user1Side;
+        debate.user2Side = user2Side;
+
+        // Reset to opening phase
+        debate.phase = 'opening';
+        debate.currentSpeaker = Math.random() > 0.5 ? debate.user1 : debate.user2;
+
+        io.to(debate.user1).emit('topic-changed', {
+            topic: newTopic,
+            yourSide: user1Side,
+            firstSpeaker: debate.currentSpeaker,
+            youGoFirst: debate.currentSpeaker === debate.user1
+        });
+
+        io.to(debate.user2).emit('topic-changed', {
+            topic: newTopic,
+            yourSide: user2Side,
+            firstSpeaker: debate.currentSpeaker,
+            youGoFirst: debate.currentSpeaker === debate.user2
+        });
+        
+        console.log(`New topic assigned for debate ${debateId}`);
+    });
+
     // End debate
     socket.on('end-debate', ({ debateId }) => {
         const debate = activeDebates.get(debateId);
