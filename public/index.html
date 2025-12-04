@@ -567,6 +567,7 @@
 
         <div class="controls">
             <button class="btn-primary" id="findBtn"><span>Find Opponent</span></button>
+            <button class="btn-secondary" id="nextOpponentBtn" disabled><span>Next Opponent</span></button>
             <button class="btn-danger" id="endBtn" disabled><span>End Debate</span></button>
         </div>
 
@@ -636,6 +637,7 @@
         const topicElement = document.getElementById('topic');
         const connectionStatus = document.getElementById('connectionStatus');
         const findBtn = document.getElementById('findBtn');
+        const nextOpponentBtn = document.getElementById('nextOpponentBtn');
         const endBtn = document.getElementById('endBtn');
         const localTimer = document.getElementById('localTimer');
         const remoteTimer = document.getElementById('remoteTimer');
@@ -693,6 +695,7 @@
                     connectionStatus.textContent = 'Matched! Starting soon...';
                     connectionStatus.className = 'connection-status connected';
                     
+                    nextOpponentBtn.disabled = false;
                     endBtn.disabled = false;
 
                     // Show emoji bar
@@ -1052,6 +1055,15 @@
             findBtn.disabled = true;
         });
 
+        nextOpponentBtn.addEventListener('click', () => {
+            // End current debate
+            socket.emit('end-debate', { debateId: currentDebate });
+            endDebateCleanup();
+            
+            // Automatically search for new opponent
+            findBtn.click();
+        });
+
         endBtn.addEventListener('click', () => {
             socket.emit('end-debate', { debateId: currentDebate });
             endDebateCleanup();
@@ -1096,6 +1108,7 @@
             connectionStatus.className = 'connection-status';
             
             findBtn.disabled = false;
+            nextOpponentBtn.disabled = true;
             endBtn.disabled = true;
             
             currentDebate = null;

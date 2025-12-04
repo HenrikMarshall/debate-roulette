@@ -125,7 +125,8 @@ io.on('connection', (socket) => {
                 currentSpeaker: firstSpeaker,
                 phase: 'opening', // 'opening', 'response', 'open-debate'
                 startedAt: Date.now(),
-                round: 1
+                round: 1,
+                lastFirstSpeaker: firstSpeaker // Track who went first to alternate
             };
 
             activeDebates.set(debateId, debate);
@@ -263,11 +264,15 @@ io.on('connection', (socket) => {
         debate.topic = newTopic;
         debate.round = (debate.round || 1) + 1;
 
-        console.log(`Incrementing to round: ${debate.round}`);
+        // ALTERNATE who goes first - if user1 went first last time, user2 goes first this time
+        const newFirstSpeaker = debate.lastFirstSpeaker === debate.user1 ? debate.user2 : debate.user1;
+        debate.lastFirstSpeaker = newFirstSpeaker;
+        debate.currentSpeaker = newFirstSpeaker;
+
+        console.log(`Round ${debate.round}: ${newFirstSpeaker} goes first (alternating)`);
 
         // Reset to opening phase
         debate.phase = 'opening';
-        debate.currentSpeaker = Math.random() > 0.5 ? debate.user1 : debate.user2;
 
         io.to(debate.user1).emit('topic-changed', {
             topic: newTopic,
