@@ -575,23 +575,18 @@
         <div class="emoji-bar" id="emojiBar" style="display: none;">
             <button class="emoji-btn" data-emoji="🔥" title="Fire!">
                 🔥
-                <span class="emoji-count" id="count-🔥">5</span>
             </button>
             <button class="emoji-btn" data-emoji="💀" title="Destroyed!">
                 💀
-                <span class="emoji-count" id="count-💀">5</span>
             </button>
             <button class="emoji-btn" data-emoji="😂" title="Hilarious!">
                 😂
-                <span class="emoji-count" id="count-😂">5</span>
             </button>
             <button class="emoji-btn" data-emoji="👏" title="Good point!">
                 👏
-                <span class="emoji-count" id="count-👏">5</span>
             </button>
             <button class="emoji-btn" data-emoji="🤯" title="Mind blown!">
                 🤯
-                <span class="emoji-count" id="count-🤯">5</span>
             </button>
         </div>
 
@@ -635,15 +630,6 @@
         let yourSide = '';
         let currentRound = 1;
         let lastTurnChangeTime = 0;
-        
-        // Emoji reaction state
-        let emojiCounts = {
-            '🔥': 5,
-            '💀': 5,
-            '😂': 5,
-            '👏': 5,
-            '🤯': 5
-        };
 
         // DOM elements
         const localVideo = document.getElementById('localVideo');
@@ -714,7 +700,6 @@
 
                     // Show emoji bar
                     emojiBar.style.display = 'flex';
-                    resetEmojiCounts();
 
                     // Show countdown overlay
                     await showCountdown();
@@ -764,9 +749,6 @@
                         currentRound = data.round;
                         roundNumber.textContent = currentRound;
                     }
-                    
-                    // Reset emoji counts for new round
-                    resetEmojiCounts();
                     
                     if (timerInterval) clearInterval(timerInterval);
                     
@@ -1128,40 +1110,7 @@
         }
 
         // Emoji reaction functions
-        function resetEmojiCounts() {
-            emojiCounts = {
-                '🔥': 5,
-                '💀': 5,
-                '😂': 5,
-                '👏': 5,
-                '🤯': 5
-            };
-            updateEmojiUI();
-        }
-
-        function updateEmojiUI() {
-            Object.keys(emojiCounts).forEach(emoji => {
-                const countEl = document.getElementById(`count-${emoji}`);
-                const btn = document.querySelector(`[data-emoji="${emoji}"]`);
-                if (countEl) countEl.textContent = emojiCounts[emoji];
-                if (btn) {
-                    if (emojiCounts[emoji] <= 0) {
-                        btn.classList.add('disabled');
-                        btn.disabled = true;
-                    } else {
-                        btn.classList.remove('disabled');
-                        btn.disabled = false;
-                    }
-                }
-            });
-        }
-
         function sendEmoji(emoji) {
-            if (emojiCounts[emoji] <= 0) return;
-            
-            emojiCounts[emoji]--;
-            updateEmojiUI();
-            
             // Send to opponent via socket
             socket.emit('send-emoji', {
                 debateId: currentDebate,
