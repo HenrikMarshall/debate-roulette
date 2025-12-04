@@ -789,6 +789,9 @@
         let mediaRecorder = null;
         let recordedChunks = [];
         let recordingCountdown = null;
+        
+        // Spectator connections
+        let spectatorConnections = new Map(); // spectatorId -> RTCPeerConnection
 
         // DOM elements
         const localVideo = document.getElementById('localVideo');
@@ -936,6 +939,58 @@
                     endDebateCleanup();
                 });
 
+                // Spectator joined - send them our stream
+                socket.on('spectator-joined-notify', async ({ spectatorId }) => {
+                    console.log('Spectator joined:', spectatorId);
+                    await createSpectatorConnection(spectatorId);
+                });
+
+                // Receive answer from spectator
+                socket.on('spectator-receive-answer', async ({ spectatorId, answer }) => {
+                    const pc = spectatorConnections.get(spectatorId);
+                    if (pc) {
+                        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+                    }
+                });
+
+                // Receive ICE candidate from spectator
+                socket.on('spectator-receive-ice-candidate', async ({ peerId, candidate }) => {
+                    const pc = spectatorConnections.get(peerId);
+                    if (pc && candidate) {
+                        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                    }
+                });
+
+                async function createSpectatorConnection(spectatorId) {
+                    const pc = new RTCPeerConnection(rtcConfig);
+                    spectatorConnections.set(spectatorId, pc);
+
+                    // Add our local stream
+                    localStream.getTracks().forEach(track => {
+                        pc.addTrack(track, localStream);
+                    });
+
+                    // Handle ICE candidates
+                    pc.onicecandidate = (event) => {
+                        if (event.candidate) {
+                            socket.emit('spectator-ice-candidate', {
+                                peerId: spectatorId,
+                                candidate: event.candidate
+                            });
+                        }
+                    };
+
+                    // Create and send offer
+                    const offer = await pc.createOffer();
+                    await pc.setLocalDescription(offer);
+                    
+                    socket.emit('spectator-offer', {
+                        spectatorId: spectatorId,
+                        offer: offer,
+                        streamType: socket.id
+                    });
+                }
+
                 socket.on('error', (data) => {
                     alert(data.message);
                 });
@@ -983,7 +1038,18 @@
             const textEl = overlay.querySelector('.countdown-text');
             
             overlay.style.display = 'flex';
+            
+            // Show voting message for spectators
+            textEl.textContent = 'Spectators Voting...';
+            numberEl.textContent = '⚖️';
+            numberEl.style.animation = 'countdownPulse 1s ease-in-out infinite';
+            
+            // Wait 7 seconds (give time for voting)
+            await new Promise(resolve => setTimeout(resolve, 7000));
+            
+            // Then show countdown
             textEl.textContent = 'New Topic In...';
+            numberEl.style.animation = 'none';
             
             for (let i = 3; i > 0; i--) {
                 numberEl.textContent = i;

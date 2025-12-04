@@ -149,36 +149,54 @@
             margin-bottom: 20px;
         }
 
-        /* Audio Only Display */
-        .audio-display {
+        /* Video Display */
+        .video-display {
             background: var(--surface);
             border-radius: 20px;
             padding: 40px;
             text-align: center;
         }
 
-        .debater-boxes {
+        .debater-videos {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 20px;
             margin-bottom: 30px;
         }
 
-        .debater-box {
+        .debater-video-box {
             background: var(--bg);
             border: 3px solid rgba(255, 255, 255, 0.1);
             border-radius: 15px;
-            padding: 30px;
             position: relative;
+            aspect-ratio: 4/3;
+            overflow: hidden;
         }
 
-        .debater-box.speaking {
+        .debater-video-box.speaking {
             border-color: var(--accent);
             animation: speakPulse 1.5s ease-in-out infinite;
         }
 
-        .debater-box.muted {
-            opacity: 0.5;
+        .debater-video-box.muted {
+            opacity: 0.7;
+        }
+
+        .debater-video-box video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .debater-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            padding: 20px;
+            color: white;
         }
 
         @keyframes speakPulse {
@@ -187,13 +205,13 @@
         }
 
         .debater-label {
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
 
         .debater-status {
-            font-size: 1rem;
+            font-size: 0.9rem;
             color: var(--text-dim);
         }
 
@@ -419,7 +437,7 @@
         }
 
         @media (max-width: 768px) {
-            .debater-boxes {
+            .debater-videos {
                 grid-template-columns: 1fr;
             }
 
@@ -458,15 +476,21 @@
             </div>
 
             <div class="spectator-grid">
-                <div class="audio-display">
-                    <div class="debater-boxes">
-                        <div class="debater-box" id="debater1Box">
-                            <div class="debater-label">Debater 1</div>
-                            <div class="debater-status" id="debater1Status">Waiting...</div>
+                <div class="video-display">
+                    <div class="debater-videos">
+                        <div class="debater-video-box" id="debater1VideoBox">
+                            <video id="debater1Video" autoplay playsinline></video>
+                            <div class="debater-overlay">
+                                <div class="debater-label">Debater 1</div>
+                                <div class="debater-status" id="debater1Status">Waiting...</div>
+                            </div>
                         </div>
-                        <div class="debater-box" id="debater2Box">
-                            <div class="debater-label">Debater 2</div>
-                            <div class="debater-status" id="debater2Status">Waiting...</div>
+                        <div class="debater-video-box" id="debater2VideoBox">
+                            <video id="debater2Video" autoplay playsinline></video>
+                            <div class="debater-overlay">
+                                <div class="debater-label">Debater 2</div>
+                                <div class="debater-status" id="debater2Status">Waiting...</div>
+                            </div>
                         </div>
                     </div>
                     <div class="phase-indicator" id="phaseIndicator">
@@ -494,7 +518,7 @@
             <!-- Voting Panel (appears at end of round) -->
             <div class="voting-panel" id="votingPanel">
                 <div class="voting-header">⚖️ Vote for the Winner</div>
-                <div class="voting-timer" id="votingTimer">15s</div>
+                <div class="voting-timer" id="votingTimer">10s</div>
                 <div class="vote-buttons">
                     <button class="vote-btn" id="voteDebater1">
                         Vote for Debater 1
@@ -542,8 +566,10 @@
         const spectatorCount = document.getElementById('spectatorCount');
         const chatSpectatorCount = document.getElementById('chatSpectatorCount');
         
-        const debater1Box = document.getElementById('debater1Box');
-        const debater2Box = document.getElementById('debater2Box');
+        const debater1VideoBox = document.getElementById('debater1VideoBox');
+        const debater2VideoBox = document.getElementById('debater2VideoBox');
+        const debater1Video = document.getElementById('debater1Video');
+        const debater2Video = document.getElementById('debater2Video');
         const debater1Status = document.getElementById('debater1Status');
         const debater2Status = document.getElementById('debater2Status');
         const phaseIndicator = document.getElementById('phaseIndicator');
@@ -563,6 +589,17 @@
         
         let currentDebateId = null;
         let hasVoted = false;
+        let user1Id = null;
+        let user2Id = null;
+        
+        // WebRTC connections
+        const rtcConfig = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+        let peerConnections = new Map(); // debaterId -> RTCPeerConnection
 
         // Load debates on page load
         socket.emit('get-active-debates');
@@ -601,12 +638,66 @@
             spectatorCount.textContent = data.spectatorCount;
             chatSpectatorCount.textContent = data.spectatorCount;
             
+            // Store debater IDs
+            user1Id = data.user1;
+            user2Id = data.user2;
+            
             updatePhase(data.phase);
             
             // Load chat history
             chatMessages.innerHTML = '';
             if (data.chatMessages) {
                 data.chatMessages.forEach(msg => addChatMessage(msg));
+            }
+        });
+
+        // Receive WebRTC offer from debater
+        socket.on('spectator-receive-offer', async ({ debaterId, offer, streamType }) => {
+            console.log('Received offer from:', debaterId);
+            
+            const pc = new RTCPeerConnection(rtcConfig);
+            peerConnections.set(debaterId, pc);
+
+            // Handle incoming stream
+            pc.ontrack = (event) => {
+                console.log('Received track from:', debaterId);
+                const stream = event.streams[0];
+                
+                // Determine which video element to use
+                if (debaterId === user1Id) {
+                    debater1Video.srcObject = stream;
+                } else if (debaterId === user2Id) {
+                    debater2Video.srcObject = stream;
+                }
+            };
+
+            // Handle ICE candidates
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    socket.emit('spectator-ice-candidate', {
+                        peerId: debaterId,
+                        candidate: event.candidate
+                    });
+                }
+            };
+
+            // Set remote description and create answer
+            await pc.setRemoteDescription(new RTCSessionDescription(offer));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+
+            // Send answer back
+            socket.emit('spectator-answer', {
+                debaterId: debaterId,
+                answer: answer
+            });
+        });
+
+        // Receive ICE candidate from debater
+        socket.on('spectator-receive-ice-candidate', async ({ peerId, candidate }) => {
+            const pc = peerConnections.get(peerId);
+            if (pc && candidate) {
+                await pc.addIceCandidate(new RTCIceCandidate(candidate));
             }
         });
 
@@ -619,20 +710,20 @@
             let phaseText = '';
             if (phase === 'opening') {
                 phaseText = 'Opening Statement';
-                debater1Box.classList.add('speaking');
-                debater2Box.classList.add('muted');
+                debater1VideoBox.classList.add('speaking');
+                debater2VideoBox.classList.add('muted');
             } else if (phase === 'response') {
                 phaseText = 'Response';
-                debater1Box.classList.remove('speaking');
-                debater1Box.classList.add('muted');
-                debater2Box.classList.remove('muted');
-                debater2Box.classList.add('speaking');
+                debater1VideoBox.classList.remove('speaking');
+                debater1VideoBox.classList.add('muted');
+                debater2VideoBox.classList.remove('muted');
+                debater2VideoBox.classList.add('speaking');
             } else if (phase === 'open-debate') {
                 phaseText = 'Open Debate';
-                debater1Box.classList.remove('muted');
-                debater2Box.classList.remove('muted');
-                debater1Box.classList.add('speaking');
-                debater2Box.classList.add('speaking');
+                debater1VideoBox.classList.remove('muted');
+                debater2VideoBox.classList.remove('muted');
+                debater1VideoBox.classList.add('speaking');
+                debater2VideoBox.classList.add('speaking');
             } else if (phase === 'voting') {
                 phaseText = 'Voting Period';
             }
@@ -690,7 +781,7 @@
             voteDebater1.classList.remove('voted');
             voteDebater2.classList.remove('voted');
             
-            let timeLeft = data.duration;
+            let timeLeft = data.duration; // Should be 10 seconds now
             votingTimer.textContent = timeLeft + 's';
             
             const countdown = setInterval(() => {
@@ -746,6 +837,21 @@
             if (currentDebateId) {
                 socket.emit('leave-spectator', { debateId: currentDebateId });
             }
+            
+            // Close all peer connections
+            peerConnections.forEach(pc => pc.close());
+            peerConnections.clear();
+            
+            // Stop video streams
+            if (debater1Video.srcObject) {
+                debater1Video.srcObject.getTracks().forEach(track => track.stop());
+                debater1Video.srcObject = null;
+            }
+            if (debater2Video.srcObject) {
+                debater2Video.srcObject.getTracks().forEach(track => track.stop());
+                debater2Video.srcObject = null;
+            }
+            
             spectatorView.classList.remove('active');
             debateBrowser.style.display = 'block';
             currentDebateId = null;

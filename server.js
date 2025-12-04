@@ -271,6 +271,12 @@ io.on('connection', (socket) => {
         const debate = activeDebates.get(debateId);
         if (!debate) return;
 
+        // Prevent duplicate requests - check if already in voting/transitioning
+        if (debate.phase === 'voting' || debate.phase === 'transitioning') {
+            console.log('Ignoring duplicate request - already transitioning');
+            return;
+        }
+
         // Prevent duplicate requests within 2 seconds
         const now = Date.now();
         if (debate.lastTopicRequest && now - debate.lastTopicRequest < 2000) {
@@ -281,7 +287,7 @@ io.on('connection', (socket) => {
 
         console.log(`New topic requested for debate ${debateId}, current round: ${debate.round || 1}`);
 
-        // Start voting period for spectators (15 seconds)
+        // Start voting period for spectators (10 seconds instead of 15)
         if (debate.spectators && debate.spectators.length > 0) {
             debate.phase = 'voting';
             
@@ -289,24 +295,34 @@ io.on('connection', (socket) => {
             debate.spectators.forEach(spectatorId => {
                 io.to(spectatorId).emit('voting-start', {
                     round: debate.round,
-                    duration: 15
+                    duration: 10
                 });
             });
 
             // Reset votes for new round
             debate.votes = {};
 
-            // Wait 15 seconds for voting, then continue
+            // Wait 10 seconds for voting, then continue
             setTimeout(() => {
-                proceedToNextTopic(debate, debateId);
-            }, 15000);
+                // Double-check we're still in voting phase (prevent duplicate execution)
+                if (debate.phase === 'voting') {
+                    proceedToNextTopic(debate, debateId);
+                }
+            }, 10000);
         } else {
-            // No spectators, proceed immediately
+            // No spectators, proceed immediately (but mark as transitioning)
+            debate.phase = 'transitioning';
             proceedToNextTopic(debate, debateId);
         }
     });
 
     function proceedToNextTopic(debate, debateId) {
+        // Prevent double execution
+        if (debate.phase === 'opening') {
+            console.log('Already moved to next topic, skipping');
+            return;
+        }
+
         const newTopic = getRandomTopic();
         debate.topic = newTopic;
         debate.round = (debate.round || 1) + 1;
@@ -419,8 +435,14 @@ io.on('connection', (socket) => {
             round: debate.round,
             phase: debate.phase,
             spectatorCount: debate.spectators.length,
-            chatMessages: debate.chatMessages || []
+            chatMessages: debate.chatMessages || [],
+            user1: debate.user1,
+            user2: debate.user2
         });
+
+        // Notify debaters that a spectator joined
+        io.to(debate.user1).emit('spectator-joined-notify', { spectatorId: socket.id });
+        io.to(debate.user2).emit('spectator-joined-notify', { spectatorId: socket.id });
 
         // Notify all spectators of updated count
         debate.spectators.forEach(spectatorId => {
@@ -430,6 +452,31 @@ io.on('connection', (socket) => {
         });
 
         console.log(`Spectator ${socket.id} joined debate ${debateId}`);
+    });
+
+    // WebRTC for Spectators - Debaters send offers to spectators
+    socket.on('spectator-offer', ({ spectatorId, offer, streamType }) => {
+        io.to(spectatorId).emit('spectator-receive-offer', {
+            debaterId: socket.id,
+            offer: offer,
+            streamType: streamType // 'user1' or 'user2'
+        });
+    });
+
+    // Spectators send answers back to debaters
+    socket.on('spectator-answer', ({ debaterId, answer }) => {
+        io.to(debaterId).emit('spectator-receive-answer', {
+            spectatorId: socket.id,
+            answer: answer
+        });
+    });
+
+    // ICE candidates for spectator connections
+    socket.on('spectator-ice-candidate', ({ peerId, candidate }) => {
+        io.to(peerId).emit('spectator-receive-ice-candidate', {
+            peerId: socket.id,
+            candidate: candidate
+        });
     });
 
     // Spectator Chat Message
