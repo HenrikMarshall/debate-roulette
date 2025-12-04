@@ -932,13 +932,14 @@
                 remoteVideoWrapper.querySelector('.status-indicator').textContent = 'MUTED';
                 remoteVideoWrapper.querySelector('.status-indicator').classList.remove('active');
                 
-                // ACTUALLY MUTE THE REMOTE AUDIO
+                // ENABLE YOUR MICROPHONE (you can speak)
+                localStream.getAudioTracks().forEach(track => {
+                    track.enabled = true;
+                    console.log('Local mic enabled');
+                });
+                
+                // MUTE REMOTE AUDIO (can't hear opponent)
                 remoteVideo.muted = true;
-                if (remoteVideo.srcObject) {
-                    remoteVideo.srcObject.getAudioTracks().forEach(track => {
-                        console.log('Muting remote audio track');
-                    });
-                }
                 
                 updateTimer(true);
             } else {
@@ -953,14 +954,15 @@
                 localVideoWrapper.querySelector('.status-indicator').textContent = 'MUTED';
                 localVideoWrapper.querySelector('.status-indicator').classList.remove('active');
                 
-                // UNMUTE THE REMOTE AUDIO (opponent is speaking)
+                // DISABLE YOUR MICROPHONE (opponent can't hear you)
+                localStream.getAudioTracks().forEach(track => {
+                    track.enabled = false;
+                    console.log('Local mic disabled');
+                });
+                
+                // UNMUTE REMOTE AUDIO (can hear opponent speaking)
                 remoteVideo.muted = false;
                 remoteVideo.volume = 1.0;
-                if (remoteVideo.srcObject) {
-                    remoteVideo.srcObject.getAudioTracks().forEach(track => {
-                        console.log('Unmuting remote audio track');
-                    });
-                }
                 
                 updateTimer(false);
             }
@@ -1004,14 +1006,15 @@
             remoteVideoWrapper.querySelector('.status-indicator').textContent = 'OPEN DEBATE';
             remoteVideoWrapper.querySelector('.status-indicator').classList.add('active');
             
-            // UNMUTE REMOTE AUDIO FOR OPEN DEBATE
+            // ENABLE YOUR MICROPHONE (you can speak)
+            localStream.getAudioTracks().forEach(track => {
+                track.enabled = true;
+                console.log('Local mic enabled for open debate');
+            });
+            
+            // UNMUTE REMOTE AUDIO (can hear opponent)
             remoteVideo.muted = false;
             remoteVideo.volume = 1.0;
-            if (remoteVideo.srcObject) {
-                remoteVideo.srcObject.getAudioTracks().forEach(track => {
-                    console.log('Unmuting audio for open debate');
-                });
-            }
             
             connectionStatus.textContent = 'Open debate - both sides can speak freely!';
             
