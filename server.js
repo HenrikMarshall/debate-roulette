@@ -265,6 +265,21 @@ io.on('connection', (socket) => {
         console.log(`Debate ended: ${debateId}`);
     });
 
+    // Emoji reactions
+    socket.on('send-emoji', ({ debateId, emoji }) => {
+        const debate = activeDebates.get(debateId);
+        if (!debate) return;
+
+        // Forward emoji to opponent
+        const opponentId = debate.user1 === socket.id ? debate.user2 : debate.user1;
+        io.to(opponentId).emit('emoji-received', { 
+            emoji: emoji,
+            from: socket.id 
+        });
+        
+        console.log(`Emoji ${emoji} sent in debate ${debateId}`);
+    });
+
     // Disconnect handling
     socket.on('disconnect', () => {
         console.log(`User disconnected: ${socket.id}`);

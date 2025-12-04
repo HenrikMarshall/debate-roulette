@@ -369,6 +369,146 @@
             color: var(--primary);
         }
 
+        .countdown-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 10, 15, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .countdown-number {
+            font-family: 'Syne', sans-serif;
+            font-size: 10rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: countdownPulse 1s ease-in-out;
+        }
+
+        @keyframes countdownPulse {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .countdown-text {
+            font-size: 1.5rem;
+            color: var(--text-dim);
+            margin-top: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+        }
+
+        .emoji-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50px;
+            padding: 15px 25px;
+            display: flex;
+            gap: 20px;
+            z-index: 100;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.4s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(100px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        .emoji-btn {
+            font-size: 2rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 10px;
+            transition: transform 0.2s ease;
+            position: relative;
+        }
+
+        .emoji-btn:hover {
+            transform: scale(1.3);
+        }
+
+        .emoji-btn:active {
+            transform: scale(0.9);
+        }
+
+        .emoji-btn.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .emoji-count {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--primary);
+            color: white;
+            font-size: 0.7rem;
+            font-family: 'Space Mono', monospace;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 18px;
+            text-align: center;
+        }
+
+        .floating-emoji {
+            position: absolute;
+            font-size: 3rem;
+            pointer-events: none;
+            z-index: 1000;
+            animation: floatUp 2s ease-out forwards;
+        }
+
+        @keyframes floatUp {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-200px) scale(1.5);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .emoji-bar {
+                bottom: 10px;
+                padding: 10px 15px;
+                gap: 15px;
+            }
+
+            .emoji-btn {
+                font-size: 1.5rem;
+                padding: 8px;
+            }
+
+            .floating-emoji {
+                font-size: 2.5rem;
+            }
+        }
+
         @media (max-width: 768px) {
             .video-grid {
                 grid-template-columns: 1fr;
@@ -386,6 +526,11 @@
 </head>
 <body>
     <div class="container">
+        <div id="countdownOverlay" class="countdown-overlay" style="display: none;">
+            <div class="countdown-number" id="countdownNumber">5</div>
+            <div class="countdown-text">Get Ready to Debate!</div>
+        </div>
+
         <header>
             <h1>DEBATE ROULETTE</h1>
             <p class="subtitle">Random Video Debates • 30 Seconds Each Side</p>
@@ -426,6 +571,30 @@
             <button class="btn-danger" id="endBtn" disabled><span>End Debate</span></button>
         </div>
 
+        <!-- Emoji Reaction Bar -->
+        <div class="emoji-bar" id="emojiBar" style="display: none;">
+            <button class="emoji-btn" data-emoji="🔥" title="Fire!">
+                🔥
+                <span class="emoji-count" id="count-🔥">5</span>
+            </button>
+            <button class="emoji-btn" data-emoji="💀" title="Destroyed!">
+                💀
+                <span class="emoji-count" id="count-💀">5</span>
+            </button>
+            <button class="emoji-btn" data-emoji="😂" title="Hilarious!">
+                😂
+                <span class="emoji-count" id="count-😂">5</span>
+            </button>
+            <button class="emoji-btn" data-emoji="👏" title="Good point!">
+                👏
+                <span class="emoji-count" id="count-👏">5</span>
+            </button>
+            <button class="emoji-btn" data-emoji="🤯" title="Mind blown!">
+                🤯
+                <span class="emoji-count" id="count-🤯">5</span>
+            </button>
+        </div>
+
         <div class="info-panel">
             <h3>How It Works</h3>
             <p>
@@ -464,6 +633,15 @@
         let timerInterval = null;
         let isLocalTurn = false;
         let yourSide = '';
+        
+        // Emoji reaction state
+        let emojiCounts = {
+            '🔥': 5,
+            '💀': 5,
+            '😂': 5,
+            '👏': 5,
+            '🤯': 5
+        };
 
         // DOM elements
         const localVideo = document.getElementById('localVideo');
@@ -477,16 +655,33 @@
         const remoteTimer = document.getElementById('remoteTimer');
         const localVideoWrapper = document.getElementById('localVideoWrapper');
         const remoteVideoWrapper = document.getElementById('remoteVideoWrapper');
+        const emojiBar = document.getElementById('emojiBar');
 
         // Initialize
         async function init() {
             try {
-                // Get local media
+                // Get local media with explicit audio constraints
                 localStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: true, 
-                    audio: true 
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }, 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
                 });
+                
                 localVideo.srcObject = localStream;
+                
+                // Log track info for debugging
+                console.log('Local stream tracks:', localStream.getTracks().map(t => ({
+                    kind: t.kind,
+                    enabled: t.enabled,
+                    muted: t.muted,
+                    readyState: t.readyState
+                })));
 
                 // Connect to signaling server
                 socket = io(BACKEND_URL);
@@ -508,14 +703,25 @@
                     yourSide = data.yourSide;
                     
                     topicElement.textContent = `${data.topic} (You are: ${data.yourSide})`;
-                    connectionStatus.textContent = 'Connected! Setting up video...';
+                    connectionStatus.textContent = 'Matched! Starting soon...';
                     connectionStatus.className = 'connection-status connected';
                     
                     skipBtn.disabled = false;
                     endBtn.disabled = false;
 
-                    // Initialize WebRTC
+                    // Show emoji bar
+                    emojiBar.style.display = 'flex';
+                    resetEmojiCounts();
+
+                    // Show countdown overlay
+                    await showCountdown();
+
+                    // Initialize WebRTC after countdown
                     await initWebRTC(data.youGoFirst);
+                });
+
+                socket.on('emoji-received', ({ emoji, from }) => {
+                    showFloatingEmoji(emoji, from === socket.id);
                 });
 
                 socket.on('webrtc-offer', async ({ offer, from }) => {
@@ -575,19 +781,59 @@
             }
         }
 
+        // Countdown before debate starts
+        async function showCountdown() {
+            const overlay = document.getElementById('countdownOverlay');
+            const numberEl = document.getElementById('countdownNumber');
+            
+            overlay.style.display = 'flex';
+            
+            for (let i = 5; i > 0; i--) {
+                numberEl.textContent = i;
+                numberEl.style.animation = 'none';
+                
+                // Trigger reflow to restart animation
+                void numberEl.offsetWidth;
+                numberEl.style.animation = 'countdownPulse 1s ease-in-out';
+                
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            // Show "GO!" before hiding
+            numberEl.textContent = 'GO!';
+            numberEl.style.animation = 'none';
+            void numberEl.offsetWidth;
+            numberEl.style.animation = 'countdownPulse 0.5s ease-in-out';
+            
+            await new Promise(resolve => setTimeout(resolve, 500));
+            overlay.style.display = 'none';
+            
+            connectionStatus.textContent = 'Connected! Setting up video...';
+        }
+
         // WebRTC Setup
         async function initWebRTC(youGoFirst) {
             peerConnection = new RTCPeerConnection(rtcConfig);
 
-            // Add local stream tracks
+            // Add local stream tracks with explicit audio/video
             localStream.getTracks().forEach(track => {
+                console.log('Adding track:', track.kind, track.enabled);
                 peerConnection.addTrack(track, localStream);
             });
 
             // Handle incoming tracks
             peerConnection.ontrack = (event) => {
-                console.log('Received remote track');
-                remoteVideo.srcObject = event.streams[0];
+                console.log('Received remote track:', event.track.kind, event.track.enabled);
+                if (event.streams && event.streams[0]) {
+                    remoteVideo.srcObject = event.streams[0];
+                    // Start with audio muted (will be controlled by turn system)
+                    remoteVideo.muted = true;
+                    remoteVideo.volume = 1.0;
+                    console.log('Remote video audio initialized:', {
+                        muted: remoteVideo.muted,
+                        volume: remoteVideo.volume
+                    });
+                }
             };
 
             // Handle ICE candidates
@@ -651,6 +897,14 @@
                 remoteVideoWrapper.querySelector('.status-indicator').textContent = 'MUTED';
                 remoteVideoWrapper.querySelector('.status-indicator').classList.remove('active');
                 
+                // ACTUALLY MUTE THE REMOTE AUDIO
+                remoteVideo.muted = true;
+                if (remoteVideo.srcObject) {
+                    remoteVideo.srcObject.getAudioTracks().forEach(track => {
+                        console.log('Muting remote audio track');
+                    });
+                }
+                
                 updateTimer(true);
             } else {
                 // Opponent's turn
@@ -663,6 +917,15 @@
                 remoteVideoWrapper.querySelector('.status-indicator').classList.add('active');
                 localVideoWrapper.querySelector('.status-indicator').textContent = 'MUTED';
                 localVideoWrapper.querySelector('.status-indicator').classList.remove('active');
+                
+                // UNMUTE THE REMOTE AUDIO (opponent is speaking)
+                remoteVideo.muted = false;
+                remoteVideo.volume = 1.0;
+                if (remoteVideo.srcObject) {
+                    remoteVideo.srcObject.getAudioTracks().forEach(track => {
+                        console.log('Unmuting remote audio track');
+                    });
+                }
                 
                 updateTimer(false);
             }
@@ -709,6 +972,15 @@
             localTimer.textContent = '∞';
             remoteTimer.textContent = '∞';
             
+            // UNMUTE REMOTE AUDIO FOR OPEN DEBATE
+            remoteVideo.muted = false;
+            remoteVideo.volume = 1.0;
+            if (remoteVideo.srcObject) {
+                remoteVideo.srcObject.getAudioTracks().forEach(track => {
+                    console.log('Unmuting audio for open debate');
+                });
+            }
+            
             connectionStatus.textContent = 'Open debate - both sides can speak freely!';
         }
 
@@ -735,6 +1007,9 @@
                 peerConnection.close();
                 peerConnection = null;
             }
+            
+            // Hide emoji bar
+            emojiBar.style.display = 'none';
             
             // Clear remote video
             remoteVideo.srcObject = null;
@@ -764,6 +1039,78 @@
             
             currentDebate = null;
         }
+
+        // Emoji reaction functions
+        function resetEmojiCounts() {
+            emojiCounts = {
+                '🔥': 5,
+                '💀': 5,
+                '😂': 5,
+                '👏': 5,
+                '🤯': 5
+            };
+            updateEmojiUI();
+        }
+
+        function updateEmojiUI() {
+            Object.keys(emojiCounts).forEach(emoji => {
+                const countEl = document.getElementById(`count-${emoji}`);
+                const btn = document.querySelector(`[data-emoji="${emoji}"]`);
+                if (countEl) countEl.textContent = emojiCounts[emoji];
+                if (btn) {
+                    if (emojiCounts[emoji] <= 0) {
+                        btn.classList.add('disabled');
+                        btn.disabled = true;
+                    } else {
+                        btn.classList.remove('disabled');
+                        btn.disabled = false;
+                    }
+                }
+            });
+        }
+
+        function sendEmoji(emoji) {
+            if (emojiCounts[emoji] <= 0) return;
+            
+            emojiCounts[emoji]--;
+            updateEmojiUI();
+            
+            // Send to opponent via socket
+            socket.emit('send-emoji', {
+                debateId: currentDebate,
+                emoji: emoji
+            });
+            
+            // Show on local screen
+            showFloatingEmoji(emoji, true);
+        }
+
+        function showFloatingEmoji(emoji, isLocal) {
+            const container = isLocal ? localVideoWrapper : remoteVideoWrapper;
+            const emojiEl = document.createElement('div');
+            emojiEl.className = 'floating-emoji';
+            emojiEl.textContent = emoji;
+            
+            // Random horizontal position
+            const randomX = Math.random() * 80 + 10; // 10-90%
+            emojiEl.style.left = randomX + '%';
+            emojiEl.style.bottom = '20px';
+            
+            container.appendChild(emojiEl);
+            
+            // Remove after animation
+            setTimeout(() => {
+                emojiEl.remove();
+            }, 2000);
+        }
+
+        // Emoji button event listeners
+        document.querySelectorAll('.emoji-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const emoji = btn.getAttribute('data-emoji');
+                sendEmoji(emoji);
+            });
+        });
 
         // Initialize on load
         init();
