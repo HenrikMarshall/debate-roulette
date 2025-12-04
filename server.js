@@ -145,7 +145,8 @@ io.on('connection', (socket) => {
                 topic: topic,
                 yourSide: user1Side,
                 firstSpeaker: firstSpeaker,
-                youGoFirst: firstSpeaker === user1Id
+                youGoFirst: firstSpeaker === user1Id,
+                round: 1
             });
 
             io.to(user2Id).emit('debate-matched', {
@@ -154,7 +155,8 @@ io.on('connection', (socket) => {
                 topic: topic,
                 yourSide: user2Side,
                 firstSpeaker: firstSpeaker,
-                youGoFirst: firstSpeaker === user2Id
+                youGoFirst: firstSpeaker === user2Id,
+                round: 1
             });
 
             console.log(`Debate created: ${debateId} - ${user1Id} vs ${user2Id}`);
@@ -247,9 +249,21 @@ io.on('connection', (socket) => {
         const debate = activeDebates.get(debateId);
         if (!debate) return;
 
+        // Prevent duplicate requests within 2 seconds
+        const now = Date.now();
+        if (debate.lastTopicRequest && now - debate.lastTopicRequest < 2000) {
+            console.log(`Ignoring duplicate new topic request for debate ${debateId}`);
+            return;
+        }
+        debate.lastTopicRequest = now;
+
+        console.log(`New topic requested for debate ${debateId}, current round: ${debate.round || 1}`);
+
         const newTopic = getRandomTopic();
         debate.topic = newTopic;
         debate.round = (debate.round || 1) + 1;
+
+        console.log(`Incrementing to round: ${debate.round}`);
 
         // Reset to opening phase
         debate.phase = 'opening';
