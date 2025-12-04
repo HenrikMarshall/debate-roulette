@@ -509,6 +509,130 @@
             }
         }
 
+        /* Share Clip Modal */
+        .share-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 10, 15, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .share-card {
+            background: var(--surface);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .share-card h2 {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .share-preview {
+            background: var(--bg);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .share-preview canvas {
+            width: 100%;
+            border-radius: 10px;
+        }
+
+        .share-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .share-btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .share-btn.download {
+            background: var(--accent);
+            color: var(--bg);
+        }
+
+        .share-btn.close {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+        }
+
+        .share-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .share-stats {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            margin-top: 15px;
+        }
+
+        /* Recording Indicator */
+        .recording-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 51, 102, 0.95);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-family: 'Space Mono', monospace;
+            font-weight: bold;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            z-index: 3000;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .recording-dot {
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+            animation: blink 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
         @media (max-width: 768px) {
             .video-grid {
                 grid-template-columns: 1fr;
@@ -529,6 +653,14 @@
         <div id="countdownOverlay" class="countdown-overlay" style="display: none;">
             <div class="countdown-number" id="countdownNumber">5</div>
             <div class="countdown-text">Get Ready to Debate!</div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+            <a href="/spectator.html" style="color: var(--accent); text-decoration: none; font-size: 0.95rem; padding: 10px 20px; border: 2px solid var(--accent); border-radius: 10px; transition: all 0.3s ease; font-family: 'Space Mono', monospace;" 
+               onmouseover="this.style.background='var(--accent)'; this.style.color='var(--bg)'" 
+               onmouseout="this.style.background='transparent'; this.style.color='var(--accent)'">
+                👁️ Watch Live Debates
+            </a>
         </div>
 
         <header>
@@ -568,6 +700,7 @@
         <div class="controls">
             <button class="btn-primary" id="findBtn"><span>Find Opponent</span></button>
             <button class="btn-secondary" id="nextOpponentBtn" disabled><span>Next Opponent</span></button>
+            <button class="btn-secondary" id="shareClipBtn" disabled><span>🎥 Record Clip (30s)</span></button>
             <button class="btn-danger" id="endBtn" disabled><span>End Debate</span></button>
         </div>
 
@@ -600,6 +733,27 @@
                 <strong>5.</strong> After both sides speak, open debate begins!
             </p>
         </div>
+
+        <!-- Recording Indicator -->
+        <div class="recording-indicator" id="recordingIndicator">
+            <div class="recording-dot"></div>
+            <span id="recordingTime">REC 30s</span>
+        </div>
+
+        <!-- Share Clip Modal -->
+        <div class="share-modal" id="shareModal">
+            <div class="share-card">
+                <h2>🎥 Your 30-Second Debate Clip</h2>
+                <div class="share-preview">
+                    <video id="shareVideo" controls style="width: 100%; border-radius: 10px;"></video>
+                </div>
+                <div class="share-stats" id="shareStats"></div>
+                <div class="share-buttons">
+                    <button class="share-btn download" id="downloadBtn">💾 Download Video</button>
+                    <button class="share-btn close" id="closeShareBtn">Close</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Socket.io client -->
@@ -630,6 +784,11 @@
         let yourSide = '';
         let currentRound = 1;
         let lastTurnChangeTime = 0;
+        
+        // Video recording state
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let recordingCountdown = null;
 
         // DOM elements
         const localVideo = document.getElementById('localVideo');
@@ -638,6 +797,7 @@
         const connectionStatus = document.getElementById('connectionStatus');
         const findBtn = document.getElementById('findBtn');
         const nextOpponentBtn = document.getElementById('nextOpponentBtn');
+        const shareClipBtn = document.getElementById('shareClipBtn');
         const endBtn = document.getElementById('endBtn');
         const localTimer = document.getElementById('localTimer');
         const remoteTimer = document.getElementById('remoteTimer');
@@ -645,6 +805,13 @@
         const remoteVideoWrapper = document.getElementById('remoteVideoWrapper');
         const emojiBar = document.getElementById('emojiBar');
         const roundNumber = document.getElementById('roundNumber');
+        const shareModal = document.getElementById('shareModal');
+        const shareVideo = document.getElementById('shareVideo');
+        const shareStats = document.getElementById('shareStats');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const closeShareBtn = document.getElementById('closeShareBtn');
+        const recordingIndicator = document.getElementById('recordingIndicator');
+        const recordingTime = document.getElementById('recordingTime');
 
         // Initialize
         async function init() {
@@ -696,6 +863,7 @@
                     connectionStatus.className = 'connection-status connected';
                     
                     nextOpponentBtn.disabled = false;
+                    shareClipBtn.disabled = false;
                     endBtn.disabled = false;
 
                     // Show emoji bar
@@ -975,25 +1143,32 @@
         function updateTimer(isLocal) {
             if (timerInterval) clearInterval(timerInterval);
             
-            const displayTimer = isLocal ? localTimer : remoteTimer;
-            
             timerInterval = setInterval(() => {
                 timeRemaining--;
-                displayTimer.textContent = timeRemaining + 's';
+                
+                // Update BOTH timers to stay in sync
+                localTimer.textContent = timeRemaining + 's';
+                remoteTimer.textContent = timeRemaining + 's';
                 
                 if (timeRemaining <= 5) {
-                    displayTimer.classList.add('warning');
+                    localTimer.classList.add('warning');
+                    remoteTimer.classList.add('warning');
                 } else {
-                    displayTimer.classList.remove('warning');
+                    localTimer.classList.remove('warning');
+                    remoteTimer.classList.remove('warning');
                 }
                 
                 if (timeRemaining <= 0) {
                     clearInterval(timerInterval);
                     
-                    // Send turn-completed to server (for both local and remote turns)
-                    // Only the person whose turn it is should send this
-                    if (isLocal) {
+                    console.log('Timer reached 0, isLocal:', isLocal, 'isLocalTurn:', isLocalTurn);
+                    
+                    // Send turn-completed only if it's YOUR turn
+                    if (isLocal && isLocalTurn) {
+                        console.log('Sending turn-completed to server');
                         socket.emit('turn-completed', { debateId: currentDebate });
+                    } else {
+                        console.log('Not sending turn-completed (waiting for opponent)');
                     }
                 }
             }, 1000);
@@ -1109,9 +1284,113 @@
             
             findBtn.disabled = false;
             nextOpponentBtn.disabled = true;
+            shareClipBtn.disabled = true;
             endBtn.disabled = true;
             
             currentDebate = null;
+        }
+
+        // Video Recording functionality
+        shareClipBtn.addEventListener('click', async () => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                // Stop recording if already recording
+                stopRecording();
+            } else {
+                // Start recording
+                startRecording();
+            }
+        });
+
+        closeShareBtn.addEventListener('click', () => {
+            shareModal.style.display = 'none';
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            const url = shareVideo.src;
+            const link = document.createElement('a');
+            link.download = `debate-roulette-round-${currentRound}.webm`;
+            link.href = url;
+            link.click();
+        });
+
+        async function startRecording() {
+            try {
+                // Capture the entire debate area
+                const debateArea = document.querySelector('.video-grid');
+                const stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: {
+                        displaySurface: 'browser',
+                        width: 1280,
+                        height: 720
+                    },
+                    audio: true,
+                    preferCurrentTab: true
+                });
+
+                recordedChunks = [];
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'video/webm;codecs=vp9',
+                    videoBitsPerSecond: 2500000
+                });
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    const url = URL.createObjectURL(blob);
+                    shareVideo.src = url;
+                    
+                    // Show modal with video
+                    shareStats.textContent = `Round ${currentRound} • ${topicElement.textContent}`;
+                    shareModal.style.display = 'flex';
+                    
+                    // Stop all tracks
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                    // Hide recording indicator
+                    recordingIndicator.style.display = 'none';
+                    
+                    // Reset button text
+                    shareClipBtn.innerHTML = '<span>🎥 Record Clip (30s)</span>';
+                    shareClipBtn.disabled = false;
+                };
+
+                mediaRecorder.start();
+                
+                // Show recording indicator
+                recordingIndicator.style.display = 'flex';
+                shareClipBtn.innerHTML = '<span>⏹️ Stop Recording</span>';
+                
+                // Countdown from 30
+                let timeLeft = 30;
+                recordingTime.textContent = `REC ${timeLeft}s`;
+                
+                recordingCountdown = setInterval(() => {
+                    timeLeft--;
+                    recordingTime.textContent = `REC ${timeLeft}s`;
+                    
+                    if (timeLeft <= 0) {
+                        stopRecording();
+                    }
+                }, 1000);
+
+            } catch (err) {
+                console.error('Error starting recording:', err);
+                alert('Unable to start recording. Please allow screen capture.');
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                if (recordingCountdown) {
+                    clearInterval(recordingCountdown);
+                }
+            }
         }
 
         // Emoji reaction functions

@@ -20,8 +20,9 @@ app.use(express.static('public'));
 
 // State management
 const waitingUsers = new Set();
-const activeDebates = new Map(); // debateId -> { user1, user2, topic, currentSpeaker, timeStarted }
+const activeDebates = new Map(); // debateId -> { user1, user2, topic, currentSpeaker, timeStarted, spectators: [], votes: {} }
 const userSockets = new Map(); // socketId -> userData
+const spectatorRooms = new Map(); // socketId -> debateId (for tracking which debate spectator is watching)
 
 // Debate topics
 const topics = [
@@ -126,7 +127,10 @@ io.on('connection', (socket) => {
                 phase: 'opening', // 'opening', 'response', 'open-debate'
                 startedAt: Date.now(),
                 round: 1,
-                lastFirstSpeaker: firstSpeaker // Track who went first to alternate
+                lastFirstSpeaker: firstSpeaker, // Track who went first to alternate
+                spectators: [], // Array of spectator socket IDs
+                votes: {}, // { socketId: 'user1' or 'user2' }
+                chatMessages: [] // Spectator chat messages
             };
 
             activeDebates.set(debateId, debate);
@@ -197,12 +201,27 @@ io.on('connection', (socket) => {
     // Turn completed
     socket.on('turn-completed', ({ debateId }) => {
         const debate = activeDebates.get(debateId);
-        if (!debate) return;
+        if (!debate) {
+            console.log('turn-completed: debate not found:', debateId);
+            return;
+        }
+
+        console.log(`turn-completed received for ${debateId}, phase: ${debate.phase}`);
+
+        // Prevent duplicate turn-completed within 1 second
+        const now = Date.now();
+        if (debate.lastTurnCompleted && now - debate.lastTurnCompleted < 1000) {
+            console.log('Ignoring duplicate turn-completed');
+            return;
+        }
+        debate.lastTurnCompleted = now;
 
         if (debate.phase === 'opening') {
             // First person spoke, now second person's turn
             debate.phase = 'response';
             debate.currentSpeaker = debate.currentSpeaker === debate.user1 ? debate.user2 : debate.user1;
+            
+            console.log(`Switching to response phase, new speaker: ${debate.currentSpeaker}`);
             
             io.to(debateId).emit('turn-change', {
                 currentSpeaker: debate.currentSpeaker,
@@ -212,6 +231,8 @@ io.on('connection', (socket) => {
             // Both spoke, start open debate
             debate.phase = 'open-debate';
             debate.currentSpeaker = null;
+            
+            console.log('Starting open debate');
             
             io.to(debateId).emit('open-debate-start');
         }
@@ -260,11 +281,37 @@ io.on('connection', (socket) => {
 
         console.log(`New topic requested for debate ${debateId}, current round: ${debate.round || 1}`);
 
+        // Start voting period for spectators (15 seconds)
+        if (debate.spectators && debate.spectators.length > 0) {
+            debate.phase = 'voting';
+            
+            // Notify spectators to vote
+            debate.spectators.forEach(spectatorId => {
+                io.to(spectatorId).emit('voting-start', {
+                    round: debate.round,
+                    duration: 15
+                });
+            });
+
+            // Reset votes for new round
+            debate.votes = {};
+
+            // Wait 15 seconds for voting, then continue
+            setTimeout(() => {
+                proceedToNextTopic(debate, debateId);
+            }, 15000);
+        } else {
+            // No spectators, proceed immediately
+            proceedToNextTopic(debate, debateId);
+        }
+    });
+
+    function proceedToNextTopic(debate, debateId) {
         const newTopic = getRandomTopic();
         debate.topic = newTopic;
         debate.round = (debate.round || 1) + 1;
 
-        // ALTERNATE who goes first - if user1 went first last time, user2 goes first this time
+        // ALTERNATE who goes first
         const newFirstSpeaker = debate.lastFirstSpeaker === debate.user1 ? debate.user2 : debate.user1;
         debate.lastFirstSpeaker = newFirstSpeaker;
         debate.currentSpeaker = newFirstSpeaker;
@@ -287,9 +334,19 @@ io.on('connection', (socket) => {
             firstSpeaker: debate.currentSpeaker,
             youGoFirst: debate.currentSpeaker === debate.user2
         });
+
+        // Notify spectators of new topic
+        if (debate.spectators) {
+            debate.spectators.forEach(spectatorId => {
+                io.to(spectatorId).emit('spectator-new-topic', {
+                    topic: newTopic,
+                    round: debate.round
+                });
+            });
+        }
         
         console.log(`New topic assigned for debate ${debateId}, Round ${debate.round}`);
-    });
+    }
 
     // End debate
     socket.on('end-debate', ({ debateId }) => {
@@ -325,12 +382,151 @@ io.on('connection', (socket) => {
         console.log(`Emoji ${emoji} sent in debate ${debateId}`);
     });
 
+    // Spectator Mode - Get list of active debates
+    socket.on('get-active-debates', () => {
+        const debates = [];
+        activeDebates.forEach((debate, debateId) => {
+            debates.push({
+                id: debateId,
+                topic: debate.topic,
+                round: debate.round,
+                phase: debate.phase,
+                spectatorCount: debate.spectators.length,
+                startedAt: debate.startedAt
+            });
+        });
+        socket.emit('active-debates-list', debates);
+    });
+
+    // Spectator Mode - Join debate as spectator
+    socket.on('join-as-spectator', ({ debateId }) => {
+        const debate = activeDebates.get(debateId);
+        if (!debate) {
+            socket.emit('spectator-error', { message: 'Debate not found' });
+            return;
+        }
+
+        // Add to spectators
+        if (!debate.spectators.includes(socket.id)) {
+            debate.spectators.push(socket.id);
+        }
+        spectatorRooms.set(socket.id, debateId);
+
+        // Send debate info
+        socket.emit('spectator-joined', {
+            debateId: debateId,
+            topic: debate.topic,
+            round: debate.round,
+            phase: debate.phase,
+            spectatorCount: debate.spectators.length,
+            chatMessages: debate.chatMessages || []
+        });
+
+        // Notify all spectators of updated count
+        debate.spectators.forEach(spectatorId => {
+            io.to(spectatorId).emit('spectator-count-update', {
+                count: debate.spectators.length
+            });
+        });
+
+        console.log(`Spectator ${socket.id} joined debate ${debateId}`);
+    });
+
+    // Spectator Chat Message
+    socket.on('spectator-chat', ({ debateId, message }) => {
+        const debate = activeDebates.get(debateId);
+        if (!debate || !debate.spectators.includes(socket.id)) return;
+
+        const chatMessage = {
+            id: Date.now() + Math.random(),
+            socketId: socket.id,
+            message: message,
+            timestamp: Date.now()
+        };
+
+        debate.chatMessages = debate.chatMessages || [];
+        debate.chatMessages.push(chatMessage);
+
+        // Keep only last 50 messages
+        if (debate.chatMessages.length > 50) {
+            debate.chatMessages = debate.chatMessages.slice(-50);
+        }
+
+        // Broadcast to all spectators
+        debate.spectators.forEach(spectatorId => {
+            io.to(spectatorId).emit('spectator-chat-message', chatMessage);
+        });
+    });
+
+    // Spectator Vote
+    socket.on('cast-vote', ({ debateId, vote }) => {
+        const debate = activeDebates.get(debateId);
+        if (!debate || !debate.spectators.includes(socket.id)) return;
+
+        // Record vote (vote is 'user1' or 'user2')
+        debate.votes[socket.id] = vote;
+
+        // Send confirmation
+        socket.emit('vote-recorded', { vote: vote });
+
+        // Calculate and broadcast vote totals
+        const voteTotals = {
+            user1: 0,
+            user2: 0
+        };
+
+        Object.values(debate.votes).forEach(v => {
+            if (v === 'user1') voteTotals.user1++;
+            if (v === 'user2') voteTotals.user2++;
+        });
+
+        // Broadcast to all spectators
+        debate.spectators.forEach(spectatorId => {
+            io.to(spectatorId).emit('vote-update', voteTotals);
+        });
+
+        console.log(`Vote cast in debate ${debateId}: ${vote}`);
+    });
+
+    // Leave spectator mode
+    socket.on('leave-spectator', ({ debateId }) => {
+        const debate = activeDebates.get(debateId);
+        if (debate) {
+            debate.spectators = debate.spectators.filter(id => id !== socket.id);
+            spectatorRooms.delete(socket.id);
+
+            // Notify remaining spectators
+            debate.spectators.forEach(spectatorId => {
+                io.to(spectatorId).emit('spectator-count-update', {
+                    count: debate.spectators.length
+                });
+            });
+        }
+    });
+
     // Disconnect handling
     socket.on('disconnect', () => {
         console.log(`User disconnected: ${socket.id}`);
 
         // Remove from waiting queue
         waitingUsers.delete(socket.id);
+
+        // Remove from spectator rooms
+        const spectatingDebateId = spectatorRooms.get(socket.id);
+        if (spectatingDebateId) {
+            const debate = activeDebates.get(spectatingDebateId);
+            if (debate) {
+                debate.spectators = debate.spectators.filter(id => id !== socket.id);
+                
+                // Notify remaining spectators
+                debate.spectators.forEach(spectatorId => {
+                    io.to(spectatorId).emit('spectator-count-update', {
+                        count: debate.spectators.length
+                    });
+                });
+            }
+            spectatorRooms.delete(socket.id);
+        }
 
         // Handle active debate
         const userData = userSockets.get(socket.id);
@@ -341,6 +537,13 @@ io.on('connection', (socket) => {
                 
                 // Notify opponent
                 io.to(opponentId).emit('opponent-disconnected');
+
+                // Notify spectators that debate ended
+                if (debate.spectators) {
+                    debate.spectators.forEach(spectatorId => {
+                        io.to(spectatorId).emit('debate-ended-spectator');
+                    });
+                }
 
                 // Clean up opponent's data
                 const opponentData = userSockets.get(opponentId);
