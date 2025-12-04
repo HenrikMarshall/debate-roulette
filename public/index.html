@@ -705,7 +705,7 @@
                     currentDebate = data.debateId;
                     yourSide = data.yourSide;
                     
-                    topicElement.textContent = `${data.topic} (You are: ${data.yourSide})`;
+                    topicElement.textContent = data.topic;
                     connectionStatus.textContent = 'Matched! Starting soon...';
                     connectionStatus.className = 'connection-status connected';
                     
@@ -757,10 +757,13 @@
                 });
 
                 socket.on('topic-changed', (data) => {
-                    yourSide = data.yourSide;
-                    currentRound++;
-                    roundNumber.textContent = currentRound;
-                    topicElement.textContent = `${data.topic} (You are: ${data.yourSide})`;
+                    topicElement.textContent = data.topic;
+                    
+                    // Update round from server
+                    if (data.round) {
+                        currentRound = data.round;
+                        roundNumber.textContent = currentRound;
+                    }
                     
                     // Reset emoji counts for new round
                     resetEmojiCounts();

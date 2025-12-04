@@ -124,7 +124,8 @@ io.on('connection', (socket) => {
                 user2Side: user2Side,
                 currentSpeaker: firstSpeaker,
                 phase: 'opening', // 'opening', 'response', 'open-debate'
-                startedAt: Date.now()
+                startedAt: Date.now(),
+                round: 1
             };
 
             activeDebates.set(debateId, debate);
@@ -220,12 +221,7 @@ io.on('connection', (socket) => {
 
         const newTopic = getRandomTopic();
         debate.topic = newTopic;
-
-        // Re-assign sides
-        const user1Side = getRandomSide();
-        const user2Side = user1Side === 'PRO' ? 'CON' : 'PRO';
-        debate.user1Side = user1Side;
-        debate.user2Side = user2Side;
+        debate.round = (debate.round || 1) + 1;
 
         // Reset to opening phase
         debate.phase = 'opening';
@@ -233,14 +229,14 @@ io.on('connection', (socket) => {
 
         io.to(debate.user1).emit('topic-changed', {
             topic: newTopic,
-            yourSide: user1Side,
+            round: debate.round,
             firstSpeaker: debate.currentSpeaker,
             youGoFirst: debate.currentSpeaker === debate.user1
         });
 
         io.to(debate.user2).emit('topic-changed', {
             topic: newTopic,
-            yourSide: user2Side,
+            round: debate.round,
             firstSpeaker: debate.currentSpeaker,
             youGoFirst: debate.currentSpeaker === debate.user2
         });
@@ -253,12 +249,7 @@ io.on('connection', (socket) => {
 
         const newTopic = getRandomTopic();
         debate.topic = newTopic;
-
-        // Re-assign sides
-        const user1Side = getRandomSide();
-        const user2Side = user1Side === 'PRO' ? 'CON' : 'PRO';
-        debate.user1Side = user1Side;
-        debate.user2Side = user2Side;
+        debate.round = (debate.round || 1) + 1;
 
         // Reset to opening phase
         debate.phase = 'opening';
@@ -266,19 +257,19 @@ io.on('connection', (socket) => {
 
         io.to(debate.user1).emit('topic-changed', {
             topic: newTopic,
-            yourSide: user1Side,
+            round: debate.round,
             firstSpeaker: debate.currentSpeaker,
             youGoFirst: debate.currentSpeaker === debate.user1
         });
 
         io.to(debate.user2).emit('topic-changed', {
             topic: newTopic,
-            yourSide: user2Side,
+            round: debate.round,
             firstSpeaker: debate.currentSpeaker,
             youGoFirst: debate.currentSpeaker === debate.user2
         });
         
-        console.log(`New topic assigned for debate ${debateId}`);
+        console.log(`New topic assigned for debate ${debateId}, Round ${debate.round}`);
     });
 
     // End debate
