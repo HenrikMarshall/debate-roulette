@@ -18,6 +18,15 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
+// Routes
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'landing.html'));
+});
+
+app.get('/debate', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // State management
 const waitingUsers = new Set();
 const activeDebates = new Map(); // debateId -> { user1, user2, topic, currentSpeaker, timeStarted, spectators: [], votes: {} }

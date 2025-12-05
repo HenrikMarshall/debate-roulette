@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tug O Word - Instant Video Debates on Controversial Topics</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Get matched with strangers for 30-second video debates on controversial topics. Like Omegle meets debate club. Join live debates or watch as a spectator.">
+    <meta name="keywords" content="debate, video chat, controversial topics, omegle, random chat, live debates, argue online, tug of war">
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Tug O Word - Instant Video Debates">
+    <meta property="og:description" content="Random video debates on controversial topics. 30 seconds per side. Pull words in your direction.">
+    <meta property="og:image" content="/og-image.png">
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Tug O Word - Instant Video Debates">
+    <meta name="twitter:description" content="Random video debates on controversial topics. 30 seconds per side.">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #ff3366;
+            --secondary: #6366ff;
+            --accent: #00ff88;
+            --bg: #0a0a0f;
+            --surface: #1a1a24;
+            --text: #ffffff;
+            --text-dim: #a0a0b0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Mono', monospace;
+            background: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        /* Animated Background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.3;
+        }
+
+        .bg-gradient {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .gradient-1 {
+            width: 400px;
+            height: 400px;
+            background: var(--primary);
+            top: -100px;
+            left: -100px;
+        }
+
+        .gradient-2 {
+            width: 500px;
+            height: 500px;
+            background: var(--secondary);
+            bottom: -150px;
+            right: -150px;
+            animation-delay: -5s;
+        }
+
+        .gradient-3 {
+            width: 300px;
+            height: 300px;
+            background: var(--accent);
+            top: 50%;
+            left: 50%;
+            animation-delay: -10s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(50px, -50px) scale(1.1); }
+            66% { transform: translate(-50px, 50px) scale(0.9); }
+        }
+
+        /* Header */
+        .header {
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: rgba(10, 10, 15, 0.9);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--text-dim);
+            text-decoration: none;
+            transition: color 0.3s;
+            font-size: 0.95rem;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        .btn-watch {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--text);
+            transition: all 0.3s;
+        }
+
+        .btn-watch:hover {
+            background: var(--accent);
+            color: var(--bg);
+            border-color: var(--accent);
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .hero h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: 4.5rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            line-height: 1.1;
+        }
+
+        .hero-gradient {
+            background: linear-gradient(135deg, var(--primary), var(--secondary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 200% 200%;
+            animation: gradient-shift 5s ease infinite;
+        }
+
+        @keyframes gradient-shift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .hero-subtitle {
+            font-size: 1.5rem;
+            color: var(--text-dim);
+            margin-bottom: 40px;
+            max-width: 700px;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 60px;
+        }
+
+        .btn {
+            padding: 18px 40px;
+            border-radius: 12px;
+            font-family: 'Space Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            box-shadow: 0 10px 40px rgba(0, 255, 136, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 50px rgba(0, 255, 136, 0.5);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text);
+            border: 2px solid var(--text-dim);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            transform: translateY(-3px);
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 50px;
+            margin-top: 40px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        /* How It Works */
+        .section {
+            padding: 100px 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 3rem;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            margin-top: 60px;
+        }
+
+        .step {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 40px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .step:hover {
+            border-color: var(--accent);
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 255, 136, 0.2);
+        }
+
+        .step-number {
+            position: absolute;
+            top: -20px;
+            left: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .step-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+
+        .step h3 {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+
+        .step p {
+            color: var(--text-dim);
+            line-height: 1.6;
+        }
+
+        /* Topics Showcase */
+        .topics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 40px;
+        }
+
+        .topic-card {
+            background: var(--surface);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .topic-card:hover {
+            border-color: var(--accent);
+            transform: scale(1.05);
+        }
+
+        .topic-text {
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        /* Features */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-top: 60px;
+        }
+
+        .feature {
+            background: var(--surface);
+            border-radius: 15px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+
+        .feature h3 {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+        }
+
+        .feature p {
+            color: var(--text-dim);
+            line-height: 1.6;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            padding: 80px 40px;
+            text-align: center;
+            margin: 100px 40px;
+            border-radius: 30px;
+        }
+
+        .cta-section h2 {
+            font-family: 'Syne', sans-serif;
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+
+        .cta-section p {
+            font-size: 1.3rem;
+            margin-bottom: 40px;
+            opacity: 0.9;
+        }
+
+        /* FAQ */
+        .faq {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .faq-item {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .faq-question {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: var(--accent);
+        }
+
+        .faq-answer {
+            color: var(--text-dim);
+            line-height: 1.6;
+        }
+
+        /* Footer */
+        .footer {
+            padding: 60px 40px 40px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: var(--text-dim);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent);
+        }
+
+        .footer p {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1.1rem;
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+                width: 100%;
+                max-width: 300px;
+            }
+
+            .btn {
+                width: 100%;
+            }
+
+            .hero-stats {
+                flex-direction: column;
+                gap: 30px;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            .steps {
+                grid-template-columns: 1fr;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+
+            .cta-section h2 {
+                font-size: 2rem;
+            }
+
+            .cta-section p {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="bg-animation">
+        <div class="bg-gradient gradient-1"></div>
+        <div class="bg-gradient gradient-2"></div>
+        <div class="bg-gradient gradient-3"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">Tug O Word</div>
+        <nav class="nav-links">
+            <a href="#how-it-works">How It Works</a>
+            <a href="#features">Features</a>
+            <a href="#faq">FAQ</a>
+            <a href="/spectator.html" class="btn-watch">👁️ Watch Live</a>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1>
+            <span class="hero-gradient">Pull Words Your Way</span>
+        </h1>
+        <p class="hero-subtitle">
+            Get matched with strangers for 30-second video debates on controversial topics. 
+            Like tug of war, but with words.
+        </p>
+        
+        <div class="cta-buttons">
+            <a href="/debate" class="btn btn-primary">🎤 Start Debating</a>
+            <a href="/spectator.html" class="btn btn-secondary">👁️ Watch Debates</a>
+        </div>
+
+        <div class="hero-stats">
+            <div class="stat">
+                <div class="stat-number">30s</div>
+                <div class="stat-label">Per Speaker</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">100+</div>
+                <div class="stat-label">Topics</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">∞</div>
+                <div class="stat-label">Debates</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="section" id="how-it-works">
+        <h2 class="section-title">How It Works</h2>
+        
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-icon">🎥</div>
+                <h3>Click "Find Opponent"</h3>
+                <p>We instantly match you with another debater. Camera and mic required.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-icon">⚡</div>
+                <h3>Get a Random Topic</h3>
+                <p>From "AI will destroy humanity" to "Pineapple belongs on pizza" - every topic is controversial.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-icon">🎤</div>
+                <h3>Debate in Rounds</h3>
+                <p>Speaker 1 gets 30s, then Speaker 2 gets 30s, then 30s open debate. Repeat with new topics.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-icon">👥</div>
+                <h3>Spectators Vote</h3>
+                <p>Others can watch your debate live and vote for who's winning. Build your reputation!</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sample Topics -->
+    <section class="section">
+        <h2 class="section-title">Debate These Topics</h2>
+        <p style="text-align: center; color: var(--text-dim); margin-bottom: 40px;">
+            100+ controversial topics to argue about
+        </p>
+
+        <div class="topics-grid">
+            <div class="topic-card">
+                <div class="topic-text">🤖 AI will do more harm than good</div>
+            </div>
+            <div class="topic-card">
+                <div class="topic-text">💰 Billionaires should not exist</div>
+            </div>
+            <div class="topic-card">
+                <div class="topic-text">🏠 Remote work is better than office</div>
+            </div>
+            <div class="topic-card">
+                <div class="topic-text">🎓 College education is overrated</div>
+            </div>
+            <div class="topic-card">
+                <div class="topic-text">🥩 Eating meat is morally wrong</div>
+            </div>
+            <div class="topic-card">
+                <div class="topic-text">📱 Social media should be regulated</div>
+            </div>
+            <div class="topic-card">
+                <div class="topic-text">🚗 Self-driving cars are the future</div>
+            </div>
+            <div class="topic-card">
+                <div class="topic-text">💍 Marriage is an outdated institution</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="section" id="features">
+        <h2 class="section-title">Why Tug O Word?</h2>
+
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">⚡</div>
+                <h3>Instant Matches</h3>
+                <p>No waiting around. Click and you're debating within seconds.</p>
+            </div>
+
+            <div class="feature">
+                <div class="feature-icon">🎭</div>
+                <h3>Spectator Mode</h3>
+                <p>Watch live debates, chat with other spectators, and vote for winners.</p>
+            </div>
+
+            <div class="feature">
+                <div class="feature-icon">🔥</div>
+                <h3>Emoji Reactions</h3>
+                <p>React in real-time with fire, skull, and laughter emojis during debates.</p>
+            </div>
+
+            <div class="feature">
+                <div class="feature-icon">📹</div>
+                <h3>Record & Share</h3>
+                <p>Capture 30-second clips of your best moments and share on social media.</p>
+            </div>
+
+            <div class="feature">
+                <div class="feature-icon">🔄</div>
+                <h3>Multiple Rounds</h3>
+                <p>Keep debating! New topics every round. See who dominates over time.</p>
+            </div>
+
+            <div class="feature">
+                <div class="feature-icon">🌍</div>
+                <h3>Global Community</h3>
+                <p>Debate people from around the world. Different perspectives, same passion.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <h2>Ready to Tug Some Words?</h2>
+        <p>Join thousands arguing about what really matters (or doesn't)</p>
+        <a href="/debate" class="btn btn-primary" style="background: white; color: var(--bg);">🎤 Start Your First Debate</a>
+    </section>
+
+    <!-- FAQ -->
+    <section class="section" id="faq">
+        <h2 class="section-title">Frequently Asked Questions</h2>
+
+        <div class="faq">
+            <div class="faq-item">
+                <div class="faq-question">Do I need to create an account?</div>
+                <div class="faq-answer">Nope! Just click "Find Opponent" and start debating. No signup required.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">What if I get matched with a troll?</div>
+                <div class="faq-answer">Click "Next Opponent" to instantly find someone new. We also have a report system for abusive users.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">Can I choose my topic?</div>
+                <div class="faq-answer">Topics are random to keep things interesting! But don't worry, we have 100+ controversial topics so you'll never be bored.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">How does spectator voting work?</div>
+                <div class="faq-answer">Spectators vote during the open debate (30s). Results are shown live so you can see who's winning!</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">Is this free?</div>
+                <div class="faq-answer">Yes! Tug O Word is completely free. No hidden fees, no premium tiers.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">What devices work?</div>
+                <div class="faq-answer">Works on any device with a camera and mic - desktop, laptop, phone, or tablet. Best on Chrome or Safari.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-links">
+            <a href="/terms.html">Terms of Service</a>
+            <a href="/privacy.html">Privacy Policy</a>
+            <a href="/guidelines.html">Community Guidelines</a>
+            <a href="mailto:hello@tugoword.com">Contact</a>
+        </div>
+        <p>&copy; 2024 Tug O Word. All rights reserved.</p>
+        <p style="margin-top: 10px; font-size: 0.8rem;">Built with 🔥 for people who love to argue</p>
+    </footer>
+
+    <!-- Simple Analytics (add your tracking code) -->
+    <script>
+        // Add Google Analytics or Plausible here
+    </script>
+</body>
+</html>
