@@ -919,7 +919,6 @@
             <button class="btn-secondary" id="nextOpponentBtn" disabled><span>Next Opponent</span></button>
             <button class="btn-secondary" id="shareClipBtn" disabled><span>🎥 Record Clip (30s)</span></button>
             <button class="btn-secondary" id="shareDebateBtn" disabled><span>📤 Share</span></button>
-            <button class="btn-danger" id="endBtn" disabled><span>End Debate</span></button>
         </div>
 
         <!-- Emoji Reaction Bar -->
@@ -1086,6 +1085,7 @@
         // Debate tracking
         let debateStartTime = null;
         let spectatorCount = 0;
+        let findOpponentTimeout = null;
 
         // DOM elements
         const localVideo = document.getElementById('localVideo');
@@ -1096,7 +1096,6 @@
         const nextOpponentBtn = document.getElementById('nextOpponentBtn');
         const shareClipBtn = document.getElementById('shareClipBtn');
         const shareDebateBtn = document.getElementById('shareDebateBtn');
-        const endBtn = document.getElementById('endBtn');
         const localTimer = document.getElementById('localTimer');
         const remoteTimer = document.getElementById('remoteTimer');
         const localVideoWrapper = document.getElementById('localVideoWrapper');
@@ -1168,6 +1167,12 @@
                 socket.on('debate-matched', async (data) => {
                     console.log('Matched with opponent:', data);
                     
+                    // Clear find opponent timeout
+                    if (findOpponentTimeout) {
+                        clearTimeout(findOpponentTimeout);
+                        findOpponentTimeout = null;
+                    }
+                    
                     // Update loading overlay
                     loadingText.textContent = 'Opponent found!';
                     loadingSubtext.textContent = 'Preparing debate...';
@@ -1180,10 +1185,10 @@
                     connectionStatus.textContent = 'Matched! Starting soon...';
                     connectionStatus.className = 'connection-status connected';
                     
-                    nextOpponentBtn.disabled = false;
+                    nextOpponentBtn.disabled = true;
+                    nextOpponentBtn.textContent = 'Next Opponent (wait for round end)';
                     shareClipBtn.disabled = false;
                     shareDebateBtn.disabled = false;
-                    endBtn.disabled = false;
 
                     // Show emoji bar
                     emojiBar.style.display = 'flex';
@@ -1254,8 +1259,19 @@
                 });
 
                 socket.on('opponent-disconnected', () => {
-                    alert('Your opponent disconnected');
-                    endDebateCleanup();
+                    // Hide loading overlay if showing
+                    loadingOverlay.classList.remove('active');
+                    
+                    // Show better disconnect message
+                    if (confirm('Your opponent disconnected. Find a new opponent?')) {
+                        endDebateCleanup();
+                        // Auto-search for new opponent
+                        setTimeout(() => {
+                            findBtn.click();
+                        }, 500);
+                    } else {
+                        endDebateCleanup();
+                    }
                 });
 
                 // Spectator joined - send them our stream
@@ -1356,6 +1372,10 @@
             const numberEl = document.getElementById('countdownNumber');
             const textEl = overlay.querySelector('.countdown-text');
             
+            // Enable Next Opponent during transition period
+            nextOpponentBtn.disabled = false;
+            nextOpponentBtn.textContent = 'Next Opponent';
+            
             overlay.style.display = 'flex';
             textEl.textContent = 'New Topic In...';
             
@@ -1368,6 +1388,10 @@
                 
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
+            
+            // Disable Next Opponent once new round starts
+            nextOpponentBtn.disabled = true;
+            nextOpponentBtn.textContent = 'Next Opponent (wait for round end)';
             
             overlay.style.display = 'none';
             
@@ -1397,6 +1421,39 @@
                         muted: remoteVideo.muted,
                         volume: remoteVideo.volume
                     });
+                }
+            };
+
+            // Monitor connection state
+            peerConnection.onconnectionstatechange = () => {
+                console.log('Connection state:', peerConnection.connectionState);
+                
+                if (peerConnection.connectionState === 'failed') {
+                    console.error('WebRTC connection failed');
+                    alert('Connection failed. Please check your network and try again.');
+                    endDebateCleanup();
+                } else if (peerConnection.connectionState === 'disconnected') {
+                    console.warn('WebRTC connection disconnected');
+                    // Give it 5 seconds to reconnect
+                    setTimeout(() => {
+                        if (peerConnection && peerConnection.connectionState === 'disconnected') {
+                            alert('Lost connection to opponent.');
+                            endDebateCleanup();
+                        }
+                    }, 5000);
+                } else if (peerConnection.connectionState === 'connected') {
+                    console.log('WebRTC connected successfully');
+                }
+            };
+
+            // Handle ICE connection failures
+            peerConnection.oniceconnectionstatechange = () => {
+                console.log('ICE connection state:', peerConnection.iceConnectionState);
+                
+                if (peerConnection.iceConnectionState === 'failed') {
+                    console.error('ICE connection failed');
+                    alert('Could not establish video connection. This may be due to firewall or network restrictions.');
+                    endDebateCleanup();
                 }
             };
 
@@ -1626,10 +1683,48 @@
 
                 socket.emit('find-opponent');
                 findBtn.disabled = true;
+                
+                // Set 30-second timeout
+                findOpponentTimeout = setTimeout(() => {
+                    loadingOverlay.classList.remove('active');
+                    if (confirm('No opponents available right now. Keep waiting?')) {
+                        loadingText.textContent = 'Still searching...';
+                        loadingSubtext.textContent = 'This might take a minute';
+                        loadingOverlay.classList.add('active');
+                        
+                        // Give another 30 seconds
+                        findOpponentTimeout = setTimeout(() => {
+                            loadingOverlay.classList.remove('active');
+                            alert('No opponents found. Try again later or invite a friend!');
+                            findBtn.disabled = false;
+                            if (localStream) {
+                                localStream.getTracks().forEach(track => track.stop());
+                                localVideo.srcObject = null;
+                            }
+                            socket.emit('cancel-search');
+                        }, 30000);
+                    } else {
+                        findBtn.disabled = false;
+                        if (localStream) {
+                            localStream.getTracks().forEach(track => track.stop());
+                            localVideo.srcObject = null;
+                        }
+                        socket.emit('cancel-search');
+                    }
+                }, 30000);
+                
             } catch (err) {
                 loadingOverlay.classList.remove('active');
                 console.error('Error accessing media devices:', err);
-                alert('Please allow camera and microphone access to start debating!');
+                
+                // Better error messages
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    alert('Camera/microphone access denied. Please allow access in your browser settings and try again.');
+                } else if (err.name === 'NotFoundError') {
+                    alert('No camera or microphone found. Please connect a device and try again.');
+                } else {
+                    alert('Could not access camera/microphone. Please check your device settings.');
+                }
                 findBtn.disabled = false;
             }
         });
@@ -1641,11 +1736,6 @@
             
             // Automatically search for new opponent
             findBtn.click();
-        });
-
-        endBtn.addEventListener('click', () => {
-            socket.emit('end-debate', { debateId: currentDebate });
-            endDebateCleanup();
         });
 
         shareDebateBtn.addEventListener('click', () => {
@@ -1758,9 +1848,9 @@
             
             findBtn.disabled = false;
             nextOpponentBtn.disabled = true;
+            nextOpponentBtn.textContent = 'Next Opponent';
             shareClipBtn.disabled = true;
             shareDebateBtn.disabled = true;
-            endBtn.disabled = true;
             
             currentDebate = null;
             debateStartTime = null;
