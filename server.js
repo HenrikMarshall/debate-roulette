@@ -235,6 +235,21 @@ io.on('connection', (socket) => {
             console.log('Starting open debate');
             
             io.to(debateId).emit('open-debate-start');
+            
+            // Start voting for spectators (30 seconds - duration of open debate)
+            if (debate.spectators && debate.spectators.length > 0) {
+                // Reset votes for this round
+                debate.votes = {};
+                
+                debate.spectators.forEach(spectatorId => {
+                    io.to(spectatorId).emit('voting-start', {
+                        round: debate.round,
+                        duration: 30
+                    });
+                });
+                
+                console.log(`Voting started for ${debate.spectators.length} spectators`);
+            }
         }
     });
 
@@ -271,8 +286,8 @@ io.on('connection', (socket) => {
         const debate = activeDebates.get(debateId);
         if (!debate) return;
 
-        // Prevent duplicate requests - check if already in voting/transitioning
-        if (debate.phase === 'voting' || debate.phase === 'transitioning') {
+        // Prevent duplicate requests - check if already in transitioning
+        if (debate.phase === 'transitioning') {
             console.log('Ignoring duplicate request - already transitioning');
             return;
         }
@@ -287,33 +302,10 @@ io.on('connection', (socket) => {
 
         console.log(`New topic requested for debate ${debateId}, current round: ${debate.round || 1}`);
 
-        // Start voting period for spectators (10 seconds instead of 15)
-        if (debate.spectators && debate.spectators.length > 0) {
-            debate.phase = 'voting';
-            
-            // Notify spectators to vote
-            debate.spectators.forEach(spectatorId => {
-                io.to(spectatorId).emit('voting-start', {
-                    round: debate.round,
-                    duration: 10
-                });
-            });
-
-            // Reset votes for new round
-            debate.votes = {};
-
-            // Wait 10 seconds for voting, then continue
-            setTimeout(() => {
-                // Double-check we're still in voting phase (prevent duplicate execution)
-                if (debate.phase === 'voting') {
-                    proceedToNextTopic(debate, debateId);
-                }
-            }, 10000);
-        } else {
-            // No spectators, proceed immediately (but mark as transitioning)
-            debate.phase = 'transitioning';
-            proceedToNextTopic(debate, debateId);
-        }
+        // No voting delay needed - voting already happened during open debate
+        // Proceed immediately to next topic
+        debate.phase = 'transitioning';
+        proceedToNextTopic(debate, debateId);
     });
 
     function proceedToNextTopic(debate, debateId) {

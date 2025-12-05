@@ -1038,18 +1038,7 @@
             const textEl = overlay.querySelector('.countdown-text');
             
             overlay.style.display = 'flex';
-            
-            // Show voting message for spectators
-            textEl.textContent = 'Spectators Voting...';
-            numberEl.textContent = '⚖️';
-            numberEl.style.animation = 'countdownPulse 1s ease-in-out infinite';
-            
-            // Wait 7 seconds (give time for voting)
-            await new Promise(resolve => setTimeout(resolve, 7000));
-            
-            // Then show countdown
             textEl.textContent = 'New Topic In...';
-            numberEl.style.animation = 'none';
             
             for (let i = 3; i > 0; i--) {
                 numberEl.textContent = i;
