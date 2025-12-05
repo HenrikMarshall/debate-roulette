@@ -16,9 +16,8 @@ const io = socketIO(server, {
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
 
-// Routes
+// Routes - BEFORE static middleware to take precedence
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'landing.html'));
 });
@@ -26,6 +25,9 @@ app.get('/', (req, res) => {
 app.get('/debate', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
+// Static files - comes AFTER routes
+app.use(express.static('public'));
 
 // State management
 const waitingUsers = new Set();
