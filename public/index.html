@@ -243,6 +243,177 @@
             color: var(--primary);
         }
 
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--accent);
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 10, 15, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(10px);
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-content {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading-spinner {
+            width: 80px;
+            height: 80px;
+            border: 6px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--accent);
+            animation: spin 1s linear infinite;
+            margin: 0 auto 30px;
+        }
+
+        .loading-text {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            font-family: 'Syne', sans-serif;
+        }
+
+        .loading-subtext {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        /* Debate End Modal */
+        .debate-end-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 10, 15, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            backdrop-filter: blur(10px);
+        }
+
+        .debate-end-modal.active {
+            display: flex;
+        }
+
+        .debate-end-card {
+            background: var(--surface);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 30px;
+            padding: 50px;
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .debate-end-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .debate-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 40px 0;
+        }
+
+        .stat-box {
+            background: var(--bg);
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        .debate-end-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .debate-end-btn {
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-family: 'Space Mono', monospace;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .debate-end-btn.primary {
+            background: var(--accent);
+            color: var(--bg);
+        }
+
+        .debate-end-btn.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .debate-end-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
+        }
+
         .controls {
             display: flex;
             justify-content: center;
@@ -740,6 +911,53 @@
             <span id="recordingTime">REC 30s</span>
         </div>
 
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <div class="loading-text" id="loadingText">Finding opponent...</div>
+                <div class="loading-subtext" id="loadingSubtext">Matching you with another debater</div>
+            </div>
+        </div>
+
+        <!-- Debate End Modal -->
+        <div class="debate-end-modal" id="debateEndModal">
+            <div class="debate-end-card">
+                <div class="debate-end-title">🏆 Debate Complete!</div>
+                
+                <div class="debate-stats">
+                    <div class="stat-box">
+                        <div class="stat-value" id="roundsCompleted">0</div>
+                        <div class="stat-label">Rounds</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="debateDuration">0:00</div>
+                        <div class="stat-label">Duration</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="totalSpectators">0</div>
+                        <div class="stat-label">Spectators</div>
+                    </div>
+                </div>
+
+                <p style="color: var(--text-dim); margin-bottom: 30px;">
+                    Thanks for debating! Ready for another round?
+                </p>
+
+                <div class="debate-end-buttons">
+                    <button class="debate-end-btn primary" id="debateAgainBtn">
+                        🎤 Debate Again
+                    </button>
+                    <button class="debate-end-btn secondary" id="watchDebatesBtn">
+                        👁️ Watch Debates
+                    </button>
+                    <button class="debate-end-btn secondary" id="closeDebateEndBtn">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Share Clip Modal -->
         <div class="share-modal" id="shareModal">
             <div class="share-card">
@@ -792,6 +1010,10 @@
         
         // Spectator connections
         let spectatorConnections = new Map(); // spectatorId -> RTCPeerConnection
+        
+        // Debate tracking
+        let debateStartTime = null;
+        let spectatorCount = 0;
 
         // DOM elements
         const localVideo = document.getElementById('localVideo');
@@ -815,6 +1037,20 @@
         const closeShareBtn = document.getElementById('closeShareBtn');
         const recordingIndicator = document.getElementById('recordingIndicator');
         const recordingTime = document.getElementById('recordingTime');
+        
+        // Loading overlay
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingText = document.getElementById('loadingText');
+        const loadingSubtext = document.getElementById('loadingSubtext');
+        
+        // Debate end modal
+        const debateEndModal = document.getElementById('debateEndModal');
+        const roundsCompleted = document.getElementById('roundsCompleted');
+        const debateDuration = document.getElementById('debateDuration');
+        const totalSpectators = document.getElementById('totalSpectators');
+        const debateAgainBtn = document.getElementById('debateAgainBtn');
+        const watchDebatesBtn = document.getElementById('watchDebatesBtn');
+        const closeDebateEndBtn = document.getElementById('closeDebateEndBtn');
 
         // Initialize
         async function init() {
@@ -858,8 +1094,14 @@
 
                 socket.on('debate-matched', async (data) => {
                     console.log('Matched with opponent:', data);
+                    
+                    // Update loading overlay
+                    loadingText.textContent = 'Opponent found!';
+                    loadingSubtext.textContent = 'Preparing debate...';
+                    
                     currentDebate = data.debateId;
                     yourSide = data.yourSide;
+                    debateStartTime = Date.now();
                     
                     topicElement.textContent = data.topic;
                     connectionStatus.textContent = 'Matched! Starting soon...';
@@ -874,6 +1116,9 @@
 
                     // Show countdown overlay
                     await showCountdown();
+                    
+                    // Hide loading overlay
+                    loadingOverlay.classList.remove('active');
 
                     // Initialize WebRTC after countdown
                     await initWebRTC(data.youGoFirst);
@@ -1280,9 +1525,39 @@
         }
 
         // Button handlers
-        findBtn.addEventListener('click', () => {
-            socket.emit('find-opponent');
-            findBtn.disabled = true;
+        findBtn.addEventListener('click', async () => {
+            try {
+                // Show loading overlay
+                loadingText.textContent = 'Getting camera ready...';
+                loadingSubtext.textContent = 'Please allow camera and microphone access';
+                loadingOverlay.classList.add('active');
+
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+
+                localVideo.srcObject = localStream;
+                
+                // Update loading state
+                loadingText.textContent = 'Finding opponent...';
+                loadingSubtext.textContent = 'Matching you with another debater';
+
+                socket.emit('find-opponent');
+                findBtn.disabled = true;
+            } catch (err) {
+                loadingOverlay.classList.remove('active');
+                console.error('Error accessing media devices:', err);
+                alert('Please allow camera and microphone access to start debating!');
+                findBtn.disabled = false;
+            }
         });
 
         nextOpponentBtn.addEventListener('click', () => {
@@ -1301,6 +1576,17 @@
 
         function endDebateCleanup() {
             if (timerInterval) clearInterval(timerInterval);
+            
+            // Calculate debate duration
+            const duration = debateStartTime ? Math.floor((Date.now() - debateStartTime) / 1000) : 0;
+            const minutes = Math.floor(duration / 60);
+            const seconds = duration % 60;
+            
+            // Show debate end modal
+            roundsCompleted.textContent = currentRound;
+            debateDuration.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            totalSpectators.textContent = spectatorCount;
+            debateEndModal.classList.add('active');
             
             // Close peer connection
             if (peerConnection) {
@@ -1343,7 +1629,23 @@
             endBtn.disabled = true;
             
             currentDebate = null;
+            debateStartTime = null;
+            spectatorCount = 0;
         }
+
+        // Debate end modal button handlers
+        debateAgainBtn.addEventListener('click', () => {
+            debateEndModal.classList.remove('active');
+            findBtn.click();
+        });
+
+        watchDebatesBtn.addEventListener('click', () => {
+            window.location.href = '/spectator.html';
+        });
+
+        closeDebateEndBtn.addEventListener('click', () => {
+            debateEndModal.classList.remove('active');
+        });
 
         // Video Recording functionality
         shareClipBtn.addEventListener('click', async () => {
