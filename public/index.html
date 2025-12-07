@@ -1062,6 +1062,30 @@
             ]
         };
 
+        // Check authentication
+        const urlParams = new URLSearchParams(window.location.search);
+        const isGuest = urlParams.get('guest') === 'true';
+        const userDataStr = localStorage.getItem('tugOWordUser');
+        
+        if (!isGuest && !userDataStr) {
+            // Not logged in and not guest, redirect to login
+            window.location.href = '/login';
+        }
+        
+        let currentUser = null;
+        if (userDataStr) {
+            currentUser = JSON.parse(userDataStr);
+            console.log('Logged in as:', currentUser.name);
+        } else if (isGuest) {
+            currentUser = {
+                uid: 'guest_' + Date.now(),
+                name: 'Guest',
+                photo: null,
+                provider: 'guest'
+            };
+            console.log('Continuing as guest');
+        }
+
         // State
         let socket;
         let localStream = null;
