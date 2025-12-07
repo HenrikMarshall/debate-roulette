@@ -327,30 +327,85 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 
-    
-<script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+    <script>
+        // Your Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAe5512HbuRv4-t6H7uunhssI4mYR0JB28",
+            authDomain: "debate-roulette-74e18.firebaseapp.com",
+            projectId: "debate-roulette-74e18",
+            storageBucket: "debate-roulette-74e18.firebasestorage.app",
+            messagingSenderId: "512750725174",
+            appId: "1:512750725174:web:d0ad6958a27fa8060bd097",
+            measurementId: "G-5X582L6NDF"
+        };
 
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyAe5512HbuRv4-t6H7uunhssI4mYR0JB28",
-    authDomain: "debate-roulette-74e18.firebaseapp.com",
-    projectId: "debate-roulette-74e18",
-    storageBucket: "debate-roulette-74e18.firebasestorage.app",
-    messagingSenderId: "512750725174",
-    appId: "1:512750725174:web:d0ad6958a27fa8060bd097",
-    measurementId: "G-5X582L6NDF"
-  };
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-</script>
-    
+        const googleLoginBtn = document.getElementById('googleLoginBtn');
+        const facebookLoginBtn = document.getElementById('facebookLoginBtn');
+        const loading = document.getElementById('loading');
+
+        // Google Sign-In
+        googleLoginBtn.addEventListener('click', async () => {
+            try {
+                loading.classList.add('active');
+                const provider = new firebase.auth.GoogleAuthProvider();
+                const result = await auth.signInWithPopup(provider);
+                
+                // Store user info in localStorage
+                const user = result.user;
+                localStorage.setItem('tugOWordUser', JSON.stringify({
+                    uid: user.uid,
+                    name: user.displayName,
+                    email: user.email,
+                    photo: user.photoURL,
+                    provider: 'google'
+                }));
+
+                // Redirect to debate page
+                window.location.href = '/debate';
+            } catch (error) {
+                loading.classList.remove('active');
+                console.error('Google sign-in error:', error);
+                alert('Sign-in failed: ' + error.message);
+            }
+        });
+
+        // Facebook Sign-In
+        facebookLoginBtn.addEventListener('click', async () => {
+            try {
+                loading.classList.add('active');
+                const provider = new firebase.auth.FacebookAuthProvider();
+                const result = await auth.signInWithPopup(provider);
+                
+                // Store user info in localStorage
+                const user = result.user;
+                localStorage.setItem('tugOWordUser', JSON.stringify({
+                    uid: user.uid,
+                    name: user.displayName,
+                    email: user.email,
+                    photo: user.photoURL,
+                    provider: 'facebook'
+                }));
+
+                // Redirect to debate page
+                window.location.href = '/debate';
+            } catch (error) {
+                loading.classList.remove('active');
+                console.error('Facebook sign-in error:', error);
+                alert('Sign-in failed: ' + error.message);
+            }
+        });
+
+        // Check if already signed in
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // Already signed in, redirect to debate
+                window.location.href = '/debate';
+            }
+        });
+    </script>
 </body>
 </html>

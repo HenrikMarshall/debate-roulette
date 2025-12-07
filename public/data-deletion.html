@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Deletion - Tug O Word</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #ff3366;
+            --secondary: #6366ff;
+            --accent: #00ff88;
+            --bg: #0a0a0f;
+            --surface: #1a1a24;
+            --text: #ffffff;
+            --text-dim: #a0a0b0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Mono', monospace;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+
+        h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: 3rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-dim);
+            margin-bottom: 40px;
+            font-size: 1.2rem;
+        }
+
+        h2 {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.8rem;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            color: var(--accent);
+        }
+
+        p {
+            margin-bottom: 20px;
+            color: var(--text-dim);
+        }
+
+        ul, ol {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+
+        li {
+            margin-bottom: 15px;
+            color: var(--text-dim);
+        }
+
+        .highlight {
+            background: var(--surface);
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid var(--accent);
+            margin: 20px 0;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 30px;
+            padding: 10px 20px;
+            background: var(--surface);
+            border-radius: 8px;
+            transition: all 0.3s;
+            text-decoration: none;
+            color: var(--text);
+        }
+
+        .back-link:hover {
+            background: var(--accent);
+            color: var(--bg);
+        }
+
+        .deletion-form {
+            background: var(--surface);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: 'Space Mono', monospace;
+            font-size: 1rem;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        button {
+            background: var(--accent);
+            color: var(--bg);
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Space Mono', monospace;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
+        }
+
+        .success-message {
+            background: rgba(0, 255, 136, 0.1);
+            border: 2px solid var(--accent);
+            color: var(--accent);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .success-message.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Back to Home</a>
+        
+        <h1>Data Deletion Request</h1>
+        <p class="subtitle">Request deletion of your Tug O Word account and data</p>
+
+        <div class="highlight">
+            <strong>What gets deleted:</strong>
+            <ul style="margin-top: 10px;">
+                <li>Your account information (name, email, profile photo)</li>
+                <li>Debate history and statistics</li>
+                <li>All associated user data</li>
+            </ul>
+            <p style="margin-top: 10px;"><strong>Note:</strong> This action is permanent and cannot be undone. Deletion is completed within 30 days.</p>
+        </div>
+
+        <h2>Automatic Deletion (Recommended)</h2>
+        <p>The easiest way to delete your data:</p>
+        <ol>
+            <li>Go to your <a href="https://www.facebook.com/settings?tab=applications" target="_blank" style="color: var(--accent);">Facebook Apps and Websites settings</a></li>
+            <li>Find "Tug O Word" in the list</li>
+            <li>Click "Remove"</li>
+            <li>Your data will be automatically deleted within 30 days</li>
+        </ol>
+
+        <h2>Manual Deletion Request</h2>
+        <p>Alternatively, submit a deletion request below:</p>
+
+        <div class="deletion-form">
+            <form id="deletionForm">
+                <div class="form-group">
+                    <label for="email">Email Address *</label>
+                    <input type="email" id="email" required placeholder="your@email.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="userId">User ID (if known)</label>
+                    <input type="text" id="userId" placeholder="Optional - your Firebase UID">
+                </div>
+
+                <div class="form-group">
+                    <label for="reason">Reason for deletion (optional)</label>
+                    <textarea id="reason" rows="4" placeholder="Help us improve by telling us why you're leaving"></textarea>
+                </div>
+
+                <button type="submit">Submit Deletion Request</button>
+            </form>
+
+            <div class="success-message" id="successMessage">
+                ✓ Your deletion request has been submitted. We'll process it within 30 days and send a confirmation email.
+            </div>
+        </div>
+
+        <h2>What Happens Next?</h2>
+        <ol>
+            <li><strong>Immediate:</strong> Your account is marked for deletion</li>
+            <li><strong>Within 7 days:</strong> You'll receive a confirmation email</li>
+            <li><strong>Within 30 days:</strong> All your data is permanently deleted</li>
+            <li><strong>Completion:</strong> You'll receive a final confirmation</li>
+        </ol>
+
+        <h2>Data Retention</h2>
+        <p>After deletion, we may retain certain information for legitimate business purposes:</p>
+        <ul>
+            <li>Legal compliance (if required by law)</li>
+            <li>Fraud prevention (anonymized)</li>
+            <li>Analytics (aggregated, non-identifiable)</li>
+        </ul>
+
+        <h2>Questions?</h2>
+        <p>Contact us at: <a href="mailto:privacy@tugoword.com" style="color: var(--accent);">privacy@tugoword.com</a></p>
+
+        <div class="highlight" style="margin-top: 60px;">
+            <strong>Important:</strong> If you signed in with Google or Facebook, deleting your data from Tug O Word does not delete your Google or Facebook account. Those remain separate.
+        </div>
+    </div>
+
+    <script>
+        const deletionForm = document.getElementById('deletionForm');
+        const successMessage = document.getElementById('successMessage');
+
+        deletionForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const userId = document.getElementById('userId').value;
+            const reason = document.getElementById('reason').value;
+
+            // In production, send this to your backend
+            // For now, we'll just show success message
+            
+            // Simulated API call
+            console.log('Deletion request:', { email, userId, reason });
+
+            // TODO: Send to backend
+            // await fetch('/api/delete-request', {
+            //     method: 'POST',
+            //     headers: { 'Content-Type': 'application/json' },
+            //     body: JSON.stringify({ email, userId, reason })
+            // });
+
+            // Show success message
+            deletionForm.style.display = 'none';
+            successMessage.classList.add('active');
+
+            // Optional: Send email notification
+            // In production, your backend would handle this
+        });
+    </script>
+</body>
+</html>
