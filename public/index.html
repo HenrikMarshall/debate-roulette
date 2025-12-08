@@ -912,12 +912,6 @@
         </div>
         
         <script>
-        // Migrate old localStorage key
-        const oldUser = localStorage.getItem("hotTakeUser");
-        if (oldUser && !localStorage.getItem("hotTakeUser")) {
-            localStorage.setItem("hotTakeUser", oldUser);
-            localStorage.removeItem("hotTakeUser");
-        }
         // Show user info in profile link
         (function() {
             const userDataStr = localStorage.getItem('hotTakeUser');
@@ -1101,11 +1095,11 @@
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
     
     <script>
-        // Migrate old localStorage key
-        const oldUser = localStorage.getItem("hotTakeUser");
-        if (oldUser && !localStorage.getItem("hotTakeUser")) {
-            localStorage.setItem("hotTakeUser", oldUser);
-            localStorage.removeItem("hotTakeUser");
+        // Migrate old localStorage key from Tug O Word to Hot Take
+        const oldTugUser = localStorage.getItem("tugOWordUser");
+        if (oldTugUser && !localStorage.getItem("hotTakeUser")) {
+            localStorage.setItem("hotTakeUser", oldTugUser);
+            localStorage.removeItem("tugOWordUser");
         }
         // Configuration - UPDATE THIS WITH YOUR BACKEND URL
         const BACKEND_URL = window.location.hostname === 'localhost' 

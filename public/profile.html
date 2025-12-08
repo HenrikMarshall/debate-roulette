@@ -332,10 +332,10 @@
 
     <script>
         // Migrate old localStorage key
-        const oldUser = localStorage.getItem("hotTakeUser");
-        if (oldUser && !localStorage.getItem("hotTakeUser")) {
-            localStorage.setItem("hotTakeUser", oldUser);
-            localStorage.removeItem("hotTakeUser");
+        const oldTugUser = localStorage.getItem("tugOWordUser");
+        if (oldTugUser && !localStorage.getItem("hotTakeUser")) {
+            localStorage.setItem("hotTakeUser", oldTugUser);
+            localStorage.removeItem("tugOWordUser");
         }
         // Check if user is logged in
         const userDataStr = localStorage.getItem('hotTakeUser');
