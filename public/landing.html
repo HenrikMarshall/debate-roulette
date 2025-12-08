@@ -3,21 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tug O Word - Instant Video Debates on Controversial Topics</title>
+    <title>Hot Take - Instant Video Debates on Controversial Topics</title>
     
     <!-- SEO Meta Tags -->
     <meta name="description" content="Get matched with strangers for 30-second video debates on controversial topics. Like Omegle meets debate club. Join live debates or watch as a spectator.">
-    <meta name="keywords" content="debate, video chat, controversial topics, omegle, random chat, live debates, argue online, tug of war">
+    <meta name="keywords" content="debate, video chat, controversial topics, omegle, random chat, live debates, argue online, hot takes, hot take">
     
     <!-- Open Graph / Social Media -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Tug O Word - Instant Video Debates">
+    <meta property="og:title" content="Hot Take - Instant Video Debates">
     <meta property="og:description" content="Random video debates on controversial topics. 30 seconds per side. Pull words in your direction.">
     <meta property="og:image" content="/og-image.png">
     
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Tug O Word - Instant Video Debates">
+    <meta name="twitter:title" content="Hot Take - Instant Video Debates">
     <meta name="twitter:description" content="Random video debates on controversial topics. 30 seconds per side.">
     
     <!-- Fonts -->
@@ -539,7 +539,7 @@
 
     <!-- Header -->
     <header class="header">
-        <div class="logo">Tug O Word</div>
+        <div class="logo">Hot Take</div>
         <nav class="nav-links">
             <a href="#how-it-works">How It Works</a>
             <a href="#features">Features</a>
@@ -552,11 +552,11 @@
     <!-- Hero Section -->
     <section class="hero">
         <h1>
-            <span class="hero-gradient">Pull Words Your Way</span>
+            <span class="hero-gradient">Share Your Hot Take</span>
         </h1>
         <p class="hero-subtitle">
             Get matched with strangers for 30-second video debates on controversial topics. 
-            Like tug of war, but with words.
+            30 seconds to defend your hot take.
         </p>
         
         <div class="cta-buttons">
@@ -652,7 +652,7 @@
 
     <!-- Features -->
     <section class="section" id="features">
-        <h2 class="section-title">Why Tug O Word?</h2>
+        <h2 class="section-title">Why Hot Take?</h2>
 
         <div class="features">
             <div class="feature">
@@ -727,7 +727,7 @@
 
             <div class="faq-item">
                 <div class="faq-question">Is this free?</div>
-                <div class="faq-answer">Yes! Tug O Word is completely free. No hidden fees, no premium tiers.</div>
+                <div class="faq-answer">Yes! Hot Take is completely free. No hidden fees, no premium tiers.</div>
             </div>
 
             <div class="faq-item">
@@ -745,15 +745,21 @@
             <a href="/guidelines.html">Community Guidelines</a>
             <a href="/cdn-cgi/l/email-protection#deb6bbb2b2b19eaaabb9b1a9b1acbaf0bdb1b3">Contact</a>
         </div>
-        <p>&copy; 2024 Tug O Word. All rights reserved.</p>
+        <p>&copy; 2024 Hot Take. All rights reserved.</p>
         <p style="margin-top: 10px; font-size: 0.8rem;">Built with 🔥 for people who love to argue</p>
     </footer>
 
     <!-- Simple Analytics (add your tracking code) -->
     <script data-cfasync="false" src="/cdn-cgi/scrip
     <script>
+        // Migrate old localStorage key
+        const oldUser = localStorage.getItem("hotTakeUser");
+        if (oldUser && !localStorage.getItem("hotTakeUser")) {
+            localStorage.setItem("hotTakeUser", oldUser);
+            localStorage.removeItem("hotTakeUser");
+        }
         // Show profile button if user is logged in
-        const userDataStr = localStorage.getItem("tugOWordUser");
+        const userDataStr = localStorage.getItem("hotTakeUser");
         if (userDataStr) {
             document.getElementById("profileBtn").style.display = "block";
         }

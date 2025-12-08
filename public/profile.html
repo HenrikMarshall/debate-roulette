@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Profile - Tug O Word</title>
+    <title>My Profile - Hot Take</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -331,8 +331,14 @@
     </div>
 
     <script>
+        // Migrate old localStorage key
+        const oldUser = localStorage.getItem("hotTakeUser");
+        if (oldUser && !localStorage.getItem("hotTakeUser")) {
+            localStorage.setItem("hotTakeUser", oldUser);
+            localStorage.removeItem("hotTakeUser");
+        }
         // Check if user is logged in
-        const userDataStr = localStorage.getItem('tugOWordUser');
+        const userDataStr = localStorage.getItem('hotTakeUser');
         const loadingState = document.getElementById('loadingState');
         const profileContent = document.getElementById('profileContent');
         const notLoggedIn = document.getElementById('notLoggedIn');
@@ -382,7 +388,7 @@
             document.getElementById('logoutBtn').addEventListener('click', () => {
                 if (confirm('Are you sure you want to sign out?')) {
                     // Clear user data
-                    localStorage.removeItem('tugOWordUser');
+                    localStorage.removeItem('hotTakeUser');
                     
                     // Show success message
                     alert('✅ Signed out successfully!');
