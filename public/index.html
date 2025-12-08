@@ -876,16 +876,248 @@
         }
 
         @media (max-width: 768px) {
+            /* === LAYOUT === */
+            .container {
+                padding: 15px;
+                padding-bottom: 120px; /* Space for keyboard */
+            }
+            
             .video-grid {
                 grid-template-columns: 1fr;
+                gap: 15px;
             }
-
+            
+            .video-wrapper {
+                aspect-ratio: 16/9;
+                max-height: 45vh;
+            }
+            
+            /* === BUTTONS & CONTROLS === */
             .controls {
                 flex-direction: column;
+                gap: 12px;
             }
 
             button {
                 width: 100%;
+                min-height: 48px; /* Touch-friendly */
+                font-size: 0.95rem;
+                padding: 14px 20px;
+            }
+            
+            .btn-primary, .btn-secondary {
+                min-height: 48px;
+            }
+            
+            /* === HEADER === */
+            h1 {
+                font-size: clamp(1.8rem, 8vw, 2.5rem);
+            }
+            
+            header {
+                margin-bottom: 20px;
+            }
+            
+            .subtitle {
+                font-size: 0.75rem;
+            }
+            
+            /* === TOPIC CONTAINER === */
+            .topic-container {
+                padding: 20px 15px;
+            }
+            
+            .topic-label {
+                font-size: 0.7rem;
+                margin-bottom: 10px;
+            }
+            
+            #topic {
+                font-size: 1.1rem;
+                line-height: 1.5;
+            }
+            
+            /* === CONNECTION STATUS === */
+            .connection-status {
+                font-size: 0.85rem;
+                padding: 10px 15px;
+            }
+            
+            /* === SOCIAL SHARE === */
+            .social-buttons {
+                grid-template-columns: 1fr 1fr; /* 2 columns */
+                gap: 12px;
+            }
+            
+            .social-btn {
+                min-height: 56px;
+                font-size: 0.9rem;
+                padding: 12px;
+            }
+            
+            /* === MODALS === */
+            .share-card {
+                width: 95%;
+                padding: 25px 20px;
+            }
+            
+            .share-card h2 {
+                font-size: 1.5rem;
+            }
+            
+            .debate-end-card {
+                width: 95%;
+                padding: 25px 20px;
+            }
+            
+            .debate-end-card h2 {
+                font-size: 1.5rem;
+            }
+            
+            /* === COUNTDOWN === */
+            .countdown-number {
+                font-size: 4rem;
+            }
+            
+            .countdown-text {
+                font-size: 1rem;
+            }
+            
+            /* === LOADING OVERLAY === */
+            .loading-overlay h2 {
+                font-size: 1.3rem;
+            }
+            
+            .loading-overlay p {
+                font-size: 0.9rem;
+            }
+            
+            /* === RECORDING INDICATOR === */
+            .recording-indicator {
+                top: 10px;
+                left: 10px;
+                padding: 8px 12px;
+                font-size: 0.85rem;
+            }
+            
+            /* === PROFILE & NAV LINKS === */
+            #profileLink {
+                font-size: 0.85rem;
+                padding: 8px 15px;
+            }
+            
+            #profileLink span {
+                font-size: 0.8rem;
+            }
+            
+            .spectator-link {
+                font-size: 0.85rem;
+                padding: 8px 15px;
+            }
+            
+            /* === VIDEO LABELS === */
+            .video-label {
+                font-size: 0.75rem;
+                padding: 6px 12px;
+            }
+            
+            .timer {
+                font-size: 1.2rem;
+                padding: 8px 12px;
+            }
+            
+            .status-indicator {
+                font-size: 0.7rem;
+                padding: 4px 10px;
+            }
+        }
+        
+        /* === LANDSCAPE MOBILE === */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .video-grid {
+                grid-template-columns: 1fr 1fr;
+                height: 75vh;
+            }
+            
+            .video-wrapper {
+                height: 100%;
+                max-height: none;
+            }
+            
+            .topic-container {
+                padding: 12px 15px;
+            }
+            
+            #topic {
+                font-size: 0.95rem;
+            }
+            
+            header {
+                margin-bottom: 12px;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .subtitle {
+                font-size: 0.7rem;
+            }
+            
+            .controls {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            
+            .controls button {
+                flex: 1 1 calc(50% - 6px);
+                min-width: 140px;
+            }
+        }
+        
+        /* === SMALL MOBILE (iPhone SE, etc) === */
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .topic-container {
+                padding: 15px 12px;
+            }
+            
+            #topic {
+                font-size: 1rem;
+            }
+            
+            .social-btn {
+                font-size: 0.85rem;
+                min-height: 52px;
+            }
+            
+            .container {
+                padding: 12px;
+            }
+        }
+        
+        /* === iOS SAFE AREA === */
+        @supports (-webkit-touch-callout: none) {
+            @media (max-width: 768px) {
+                .container {
+                    padding-bottom: max(120px, env(safe-area-inset-bottom) + 20px);
+                }
+                
+                .emoji-bar {
+                    bottom: calc(10px + env(safe-area-inset-bottom));
+                }
+            }
+        }
+        
+        /* === REDUCE MOTION === */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
             }
         }
     </style>
@@ -1105,6 +1337,63 @@
         const BACKEND_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:3000' 
             : window.location.origin;
+
+        // === MOBILE DETECTION & OPTIMIZATION ===
+        const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|Windows Phone/i.test(navigator.userAgent);
+        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+            document.body.classList.add('mobile-device');
+            console.log('📱 Mobile device detected:', isIOS ? 'iOS' : isAndroid ? 'Android' : 'Other');
+        }
+        
+        // Handle orientation changes
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                window.scrollTo(0, 0);
+                console.log('🔄 Orientation changed');
+            }, 100);
+        });
+        
+        // Prevent zoom on double-tap (iOS)
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (event) => {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+        
+        // Mobile-optimized video constraints
+        const getMobileVideoConstraints = () => {
+            if (isMobile) {
+                return {
+                    video: {
+                        width: { ideal: 640 },
+                        height: { ideal: 480 },
+                        facingMode: 'user'
+                    },
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                };
+            }
+            return {
+                video: {
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                },
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                }
+            };
+        };
 
         // WebRTC Configuration
         const rtcConfig = {
@@ -1736,17 +2025,7 @@
                 
                 console.log('📹 Requesting camera access...');
 
-                localStream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    },
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true
-                    }
-                });
+                localStream = await navigator.mediaDevices.getUserMedia(getMobileVideoConstraints());
                 
                 console.log('✅ Camera access granted');
 
