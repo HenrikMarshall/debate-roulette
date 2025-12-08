@@ -1209,13 +1209,25 @@
         // Initialize
         async function init() {
             try {
+                console.log('Initializing... Connecting to:', BACKEND_URL);
+                
                 // Connect to signaling server
                 socket = io(BACKEND_URL);
 
                 // Socket event listeners
                 socket.on('connect', () => {
-                    console.log('Connected to server');
+                    console.log('✅ Connected to server successfully!');
                     connectionStatus.textContent = 'Connected - Click "Find Opponent" to start';
+                });
+                
+                socket.on('connect_error', (error) => {
+                    console.error('❌ Socket connection error:', error);
+                    connectionStatus.textContent = 'Connection error - Please refresh';
+                });
+                
+                socket.on('disconnect', () => {
+                    console.log('⚠️ Disconnected from server');
+                    connectionStatus.textContent = 'Disconnected - Please refresh';
                 });
 
                 socket.on('searching', (data) => {
@@ -1719,11 +1731,16 @@
 
         // Button handlers
         findBtn.addEventListener('click', async () => {
+            console.log('🎯 Find Opponent clicked');
+            console.log('Socket status:', socket ? (socket.connected ? 'Connected ✅' : 'Not connected ❌') : 'Not initialized ❌');
+            
             try {
                 // Show loading overlay
                 loadingText.textContent = 'Getting camera ready...';
                 loadingSubtext.textContent = 'Please allow camera and microphone access';
                 loadingOverlay.classList.add('active');
+                
+                console.log('📹 Requesting camera access...');
 
                 localStream = await navigator.mediaDevices.getUserMedia({
                     video: {
@@ -1736,8 +1753,22 @@
                         autoGainControl: true
                     }
                 });
+                
+                console.log('✅ Camera access granted');
 
                 localVideo.srcObject = localStream;
+                
+                // Make sure socket is connected
+                if (!socket || !socket.connected) {
+                    loadingOverlay.classList.remove('active');
+                    alert('Not connected to server. Please refresh the page and try again.');
+                    findBtn.disabled = false;
+                    if (localStream) {
+                        localStream.getTracks().forEach(track => track.stop());
+                        localVideo.srcObject = null;
+                    }
+                    return;
+                }
                 
                 // Update loading state
                 loadingText.textContent = 'Finding opponent...';
