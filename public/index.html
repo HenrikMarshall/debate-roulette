@@ -1209,36 +1209,13 @@
         // Initialize
         async function init() {
             try {
-                // Get local media with explicit audio constraints
-                localStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: {
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    }, 
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true
-                    }
-                });
-                
-                localVideo.srcObject = localStream;
-                
-                // Log track info for debugging
-                console.log('Local stream tracks:', localStream.getTracks().map(t => ({
-                    kind: t.kind,
-                    enabled: t.enabled,
-                    muted: t.muted,
-                    readyState: t.readyState
-                })));
-
                 // Connect to signaling server
                 socket = io(BACKEND_URL);
 
                 // Socket event listeners
                 socket.on('connect', () => {
                     console.log('Connected to server');
-                    connectionStatus.textContent = 'Connected to server';
+                    connectionStatus.textContent = 'Connected - Click "Find Opponent" to start';
                 });
 
                 socket.on('searching', (data) => {
@@ -1413,8 +1390,8 @@
                 });
 
             } catch (err) {
-                console.error('Error accessing media devices:', err);
-                alert('Please allow camera and microphone access to use this app');
+                console.error('Error initializing socket:', err);
+                alert('Could not connect to server. Please refresh and try again.');
             }
         }
 
