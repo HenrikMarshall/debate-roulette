@@ -913,10 +913,10 @@
         
         <script>
         // Migrate old localStorage key
-        const oldUser = localStorage.getItem("hotTakeUser");
+        const oldUser = localStorage.getItem("tugOWordUser");
         if (oldUser && !localStorage.getItem("hotTakeUser")) {
             localStorage.setItem("hotTakeUser", oldUser);
-            localStorage.removeItem("hotTakeUser");
+            localStorage.removeItem("tugOWordUser");
         }
         // Show user info in profile link
         (function() {
@@ -1102,10 +1102,10 @@
     
     <script>
         // Migrate old localStorage key
-        const oldUser = localStorage.getItem("hotTakeUser");
+        const oldUser = localStorage.getItem("tugOWordUser");
         if (oldUser && !localStorage.getItem("hotTakeUser")) {
             localStorage.setItem("hotTakeUser", oldUser);
-            localStorage.removeItem("hotTakeUser");
+            localStorage.removeItem("tugOWordUser");
         }
         // Configuration - UPDATE THIS WITH YOUR BACKEND URL
         const BACKEND_URL = window.location.hostname === 'localhost' 
