@@ -555,12 +555,12 @@
             <span class="hero-gradient">Share Your Hot Take</span>
         </h1>
         <p class="hero-subtitle">
-            Get matched with strangers for 30-second random video debates on controversial topics. 
-            
+            Get matched with strangers for 30-second video debates on controversial topics. 
+            30 seconds to defend your hot take.
         </p>
         
         <div class="cta-buttons">
-            <a href="/login" class="btn btn-primary">🎤 Start Debating</a>
+            <a href="/login" class="btn btn-primary" id="startDebatingBtn">🎤 Start Debating</a>
             <a href="/spectator.html" class="btn btn-secondary">👁️ Watch Debates</a>
         </div>
 
@@ -753,15 +753,22 @@
     <script data-cfasync="false" src="/cdn-cgi/scrip
     <script>
         // Migrate old localStorage key
-        const oldUser = localStorage.getItem("hotTakeUser");
+        const oldUser = localStorage.getItem("tugOWordUser");
         if (oldUser && !localStorage.getItem("hotTakeUser")) {
             localStorage.setItem("hotTakeUser", oldUser);
-            localStorage.removeItem("hotTakeUser");
+            localStorage.removeItem("tugOWordUser");
         }
+        
         // Show profile button if user is logged in
         const userDataStr = localStorage.getItem("hotTakeUser");
         if (userDataStr) {
             document.getElementById("profileBtn").style.display = "block";
+            
+            // Make "Start Debating" go directly to /debate if logged in
+            const startBtn = document.getElementById("startDebatingBtn");
+            if (startBtn) {
+                startBtn.href = "/debate";
+            }
         }
     </script>
 </body>
