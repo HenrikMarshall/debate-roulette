@@ -969,7 +969,7 @@
         <div class="controls">
             <button class="btn-primary" id="findBtn"><span>Find Opponent</span></button>
             <button class="btn-secondary" id="nextOpponentBtn" disabled><span>Next Opponent</span></button>
-            <button class="btn-secondary" id="shareClipBtn" disabled><span>🎥 Record Clip (30s)</span></button>
+            <button class="btn-secondary" id="downloadDebateBtn" disabled><span>⬇️ Download Debate</span></button>
             <button class="btn-secondary" id="shareDebateBtn" disabled><span>📤 Share</span></button>
         </div>
 
@@ -1176,7 +1176,7 @@
         const connectionStatus = document.getElementById('connectionStatus');
         const findBtn = document.getElementById('findBtn');
         const nextOpponentBtn = document.getElementById('nextOpponentBtn');
-        const shareClipBtn = document.getElementById('shareClipBtn');
+        const downloadDebateBtn = document.getElementById('downloadDebateBtn');
         const shareDebateBtn = document.getElementById('shareDebateBtn');
         const localTimer = document.getElementById('localTimer');
         const remoteTimer = document.getElementById('remoteTimer');
@@ -1246,7 +1246,7 @@
                     
                     nextOpponentBtn.disabled = true;
                     nextOpponentBtn.textContent = 'Next Opponent (wait for round end)';
-                    shareClipBtn.disabled = false;
+                    downloadDebateBtn.disabled = false;
                     shareDebateBtn.disabled = false;
 
                     // Show emoji bar
@@ -1257,6 +1257,9 @@
                     
                     // Hide loading overlay
                     loadingOverlay.classList.remove('active');
+                    
+                    // Start recording the entire debate automatically
+                    startRecording();
 
                     // Initialize WebRTC after countdown
                     await initWebRTC(data.youGoFirst);
@@ -1883,6 +1886,9 @@
         function endDebateCleanup() {
             if (timerInterval) clearInterval(timerInterval);
             
+            // Stop recording if active
+            stopRecording();
+            
             // Calculate debate duration
             const duration = debateStartTime ? Math.floor((Date.now() - debateStartTime) / 1000) : 0;
             const minutes = Math.floor(duration / 60);
@@ -1932,7 +1938,7 @@
             findBtn.disabled = false;
             nextOpponentBtn.disabled = true;
             nextOpponentBtn.textContent = 'Next Opponent';
-            shareClipBtn.disabled = true;
+            downloadDebateBtn.disabled = true;
             shareDebateBtn.disabled = true;
             
             currentDebate = null;
@@ -1996,13 +2002,19 @@
         });
 
         // Video Recording functionality
-        shareClipBtn.addEventListener('click', async () => {
-            if (mediaRecorder && mediaRecorder.state === 'recording') {
-                // Stop recording if already recording
-                stopRecording();
+        downloadDebateBtn.addEventListener('click', () => {
+            // Download the recorded debate
+            if (recordedChunks.length > 0) {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                const timestamp = new Date().toISOString().slice(0,10);
+                link.download = `hot-take-debate-${timestamp}.webm`;
+                link.href = url;
+                link.click();
+                URL.revokeObjectURL(url);
             } else {
-                // Start recording
-                startRecording();
+                alert('No recording available. The debate must be completed first.');
             }
         });
 
@@ -2020,20 +2032,65 @@
 
         async function startRecording() {
             try {
-                // Capture the entire debate area
-                const debateArea = document.querySelector('.video-grid');
-                const stream = await navigator.mediaDevices.getDisplayMedia({
-                    video: {
-                        displaySurface: 'browser',
-                        width: 1280,
-                        height: 720
-                    },
-                    audio: true,
-                    preferCurrentTab: true
-                });
-
+                console.log('Starting automatic debate recording...');
+                
+                // Capture both video streams combined
+                const canvas = document.createElement('canvas');
+                canvas.width = 1280;
+                canvas.height = 720;
+                const ctx = canvas.getContext('2d');
+                
+                // Create a MediaStream from canvas
+                const canvasStream = canvas.captureStream(30); // 30 FPS
+                
+                // Mix audio from both local and remote streams
+                const audioContext = new AudioContext();
+                const destination = audioContext.createMediaStreamDestination();
+                
+                if (localStream) {
+                    const localAudio = audioContext.createMediaStreamSource(localStream);
+                    localAudio.connect(destination);
+                }
+                
+                if (remoteVideo.srcObject) {
+                    const remoteAudio = audioContext.createMediaStreamSource(remoteVideo.srcObject);
+                    remoteAudio.connect(destination);
+                }
+                
+                // Combine video from canvas and mixed audio
+                const combinedStream = new MediaStream([
+                    ...canvasStream.getVideoTracks(),
+                    ...destination.stream.getAudioTracks()
+                ]);
+                
+                // Draw both videos to canvas continuously
+                const drawFrame = () => {
+                    if (!mediaRecorder || mediaRecorder.state !== 'recording') return;
+                    
+                    ctx.fillStyle = '#0a0a0f';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    // Draw local video (left side)
+                    if (localVideo.videoWidth > 0) {
+                        ctx.drawImage(localVideo, 0, 0, 640, 720);
+                    }
+                    
+                    // Draw remote video (right side)
+                    if (remoteVideo.videoWidth > 0) {
+                        ctx.drawImage(remoteVideo, 640, 0, 640, 720);
+                    }
+                    
+                    // Draw topic text at top
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 24px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(topicElement.textContent, 640, 40);
+                    
+                    requestAnimationFrame(drawFrame);
+                };
+                
                 recordedChunks = [];
-                mediaRecorder = new MediaRecorder(stream, {
+                mediaRecorder = new MediaRecorder(combinedStream, {
                     mimeType: 'video/webm;codecs=vp9',
                     videoBitsPerSecond: 2500000
                 });
@@ -2045,56 +2102,39 @@
                 };
 
                 mediaRecorder.onstop = () => {
-                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
-                    const url = URL.createObjectURL(blob);
-                    shareVideo.src = url;
+                    console.log('Recording stopped. Chunks collected:', recordedChunks.length);
                     
-                    // Show modal with video
-                    shareStats.textContent = `Round ${currentRound} • ${topicElement.textContent}`;
-                    shareModal.style.display = 'flex';
-                    
-                    // Stop all tracks
-                    stream.getTracks().forEach(track => track.stop());
+                    // Enable download button
+                    downloadDebateBtn.disabled = false;
+                    downloadDebateBtn.innerHTML = '<span>⬇️ Download Debate</span>';
                     
                     // Hide recording indicator
-                    recordingIndicator.style.display = 'none';
-                    
-                    // Reset button text
-                    shareClipBtn.innerHTML = '<span>🎥 Record Clip (30s)</span>';
-                    shareClipBtn.disabled = false;
+                    if (recordingIndicator) {
+                        recordingIndicator.style.display = 'none';
+                    }
                 };
 
                 mediaRecorder.start();
+                drawFrame();
                 
                 // Show recording indicator
-                recordingIndicator.style.display = 'flex';
-                shareClipBtn.innerHTML = '<span>⏹️ Stop Recording</span>';
+                if (recordingIndicator) {
+                    recordingIndicator.style.display = 'flex';
+                    recordingTime.textContent = 'REC';
+                }
                 
-                // Countdown from 30
-                let timeLeft = 30;
-                recordingTime.textContent = `REC ${timeLeft}s`;
-                
-                recordingCountdown = setInterval(() => {
-                    timeLeft--;
-                    recordingTime.textContent = `REC ${timeLeft}s`;
-                    
-                    if (timeLeft <= 0) {
-                        stopRecording();
-                    }
-                }, 1000);
+                console.log('Debate recording started successfully');
 
             } catch (err) {
                 console.error('Error starting recording:', err);
-                alert('Unable to start recording. Please allow screen capture.');
+                // Don't alert user - recording is optional
             }
         }
 
         function stopRecording() {
             if (mediaRecorder && mediaRecorder.state === 'recording') {
+                console.log('Stopping debate recording...');
                 mediaRecorder.stop();
-                if (recordingCountdown) {
-                    clearInterval(recordingCountdown);
-                }
             }
         }
 
