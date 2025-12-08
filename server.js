@@ -26,6 +26,14 @@ app.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
+app.get('/profile', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'profile.html'));
+});
+
+app.get('/data-deletion', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'data-deletion.html'));
+});
+
 app.get('/debate', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });

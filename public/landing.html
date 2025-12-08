@@ -154,6 +154,20 @@
             border-color: var(--accent);
         }
 
+        .btn-profile {
+            background: var(--accent);
+            color: var(--bg);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn-profile:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 255, 136, 0.3);
+        }
+
         /* Hero Section */
         .hero {
             min-height: 90vh;
@@ -531,17 +545,18 @@
             <a href="#features">Features</a>
             <a href="#faq">FAQ</a>
             <a href="/spectator.html" class="btn-watch">👁️ Watch Live</a>
+            <a href="/profile" class="btn-profile" id="profileBtn" style="display: none;">👤 Profile</a>
         </nav>
     </header>
 
     <!-- Hero Section -->
     <section class="hero">
         <h1>
-            <span class="hero-gradient">Hot Take</span>
+            <span class="hero-gradient">Pull Words Your Way</span>
         </h1>
         <p class="hero-subtitle">
-            Get matched with strangers for 30-second random video debates on controversial topics. 
-            
+            Get matched with strangers for 30-second video debates on controversial topics. 
+            Like tug of war, but with words.
         </p>
         
         <div class="cta-buttons">
@@ -736,3 +751,12 @@
 
     <!-- Simple Analytics (add your tracking code) -->
     <script data-cfasync="false" src="/cdn-cgi/scrip
+    <script>
+        // Show profile button if user is logged in
+        const userDataStr = localStorage.getItem("tugOWordUser");
+        if (userDataStr) {
+            document.getElementById("profileBtn").style.display = "block";
+        }
+    </script>
+</body>
+</html>
