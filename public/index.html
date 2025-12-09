@@ -1754,6 +1754,10 @@
                 socket.on('debate-matched', async (data) => {
                     console.log('Matched with opponent:', data);
                     
+                    // Track opponent info for safety features
+                    lastOpponentSocketId = data.opponentId;
+                    lastDebateTopic = data.topic;
+                    
                     // Track debate match
                     const waitTime = matchStartTime ? Date.now() - matchStartTime : 0;
                     trackEvent('Debate Matched', {
@@ -2550,12 +2554,6 @@
         let lastOpponentId = null;
         let lastOpponentSocketId = null;
         let lastDebateTopic = null;
-        
-        // Track opponent info during debate
-        socket.on('debate-matched', (data) => {
-            lastOpponentSocketId = data.opponentId;
-            lastDebateTopic = data.topic;
-        });
         
         // Report User Button
         reportUserBtn.addEventListener('click', () => {
