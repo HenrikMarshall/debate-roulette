@@ -520,10 +520,10 @@
         .upgrade-btn {
             background: linear-gradient(135deg, #FFD700, #FFA500);
             color: #0a0a0f;
-            padding: 10px 24px;
-            border-radius: 25px;
+            padding: 8px 18px;
+            border-radius: 20px;
             font-family: 'Syne', sans-serif;
-            font-size: 0.95rem;
+            font-size: 0.85rem;
             font-weight: 700;
             border: none;
             cursor: pointer;
@@ -1143,10 +1143,13 @@
             /* Premium Button - Mobile */
             .upgrade-btn,
             .premium-badge {
-                position: static;
-                margin: 15px auto;
-                display: block;
-                width: fit-content;
+                font-size: 0.75rem;
+                padding: 6px 12px;
+                margin: 0;
+            }
+
+            .upgrade-btn {
+                order: -1; /* Put first in flex */
             }
 
             /* Premium Modal - Mobile */
@@ -1596,25 +1599,25 @@
             <div class="countdown-text">Get Ready to Debate!</div>
         </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 15px; flex-wrap: wrap;">
-            <div style="display: flex; gap: 15px; align-items: center;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 10px; flex-wrap: wrap;">
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                 <button class="premium-badge" id="premiumBadge" style="display: none; position: static; margin: 0;">
                     <span class="crown-icon">👑</span> PRO
                 </button>
                 <button class="upgrade-btn" id="upgradeBtn" style="position: static; margin: 0;">
-                    ✨ Upgrade to PRO
+                    👑 PRO
                 </button>
-                <a href="/profile" id="profileLink" style="color: var(--text); text-decoration: none; font-size: 0.95rem; padding: 10px 20px; border: 2px solid rgba(255,255,255,0.2); border-radius: 10px; transition: all 0.3s ease; font-family: 'Space Mono', monospace; display: flex; align-items: center; gap: 10px;" 
+                <a href="/profile" id="profileLink" style="color: var(--text); text-decoration: none; font-size: 0.85rem; padding: 8px 15px; border: 2px solid rgba(255,255,255,0.2); border-radius: 10px; transition: all 0.3s ease; font-family: 'Space Mono', monospace; display: flex; align-items: center; gap: 8px;" 
                    onmouseover="this.style.background='rgba(255,255,255,0.1)'" 
                    onmouseout="this.style.background='transparent'">
-                    <span id="userInitial" style="width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: var(--bg); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem;">?</span>
+                    <span id="userInitial" style="width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: var(--bg); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem;">?</span>
                     <span id="userName">Profile</span>
                 </a>
             </div>
-            <a href="/spectator.html" style="color: var(--accent); text-decoration: none; font-size: 0.95rem; padding: 10px 20px; border: 2px solid var(--accent); border-radius: 10px; transition: all 0.3s ease; font-family: 'Space Mono', monospace;" 
+            <a href="/spectator.html" style="color: var(--accent); text-decoration: none; font-size: 0.85rem; padding: 8px 15px; border: 2px solid var(--accent); border-radius: 10px; transition: all 0.3s ease; font-family: 'Space Mono', monospace; white-space: nowrap;" 
                onmouseover="this.style.background='var(--accent)'; this.style.color='var(--bg)'" 
                onmouseout="this.style.background='transparent'; this.style.color='var(--accent)'">
-                👁️ Watch Live Debates
+                👁️ Watch Live
             </a>
         </div>
         
