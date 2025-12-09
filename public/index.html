@@ -3100,27 +3100,6 @@
                 // Don't alert user - recording is optional
             }
         }
-                    if (recordingIndicator) {
-                        recordingIndicator.style.display = 'none';
-                    }
-                };
-
-                mediaRecorder.start();
-                drawFrame();
-                
-                // Show recording indicator
-                if (recordingIndicator) {
-                    recordingIndicator.style.display = 'flex';
-                    recordingTime.textContent = 'REC';
-                }
-                
-                console.log('Debate recording started successfully');
-
-            } catch (err) {
-                console.error('Error starting recording:', err);
-                // Don't alert user - recording is optional
-            }
-        }
 
         function stopRecording() {
             if (mediaRecorder && mediaRecorder.state === 'recording') {
