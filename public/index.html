@@ -2115,17 +2115,16 @@
         // Mobile-optimized video constraints
         const getMobileVideoConstraints = () => {
             if (isMobile) {
+                // Simplified constraints for faster mobile initialization
                 return {
                     video: {
-                        width: { ideal: 640, max: 1280 },
-                        height: { ideal: 480, max: 720 },
-                        facingMode: 'user',
-                        aspectRatio: { ideal: 1.333 }
+                        facingMode: 'user',  // Front camera
+                        width: { max: 1280 },  // Don't force ideal, just set max
+                        height: { max: 720 }
                     },
                     audio: {
                         echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true
+                        noiseSuppression: true
                     }
                 };
             }
@@ -2142,9 +2141,9 @@
             };
         };
         
-        // Fallback constraints if mobile constraints fail
+        // Fastest fallback - just request any camera/mic
         const getBasicVideoConstraints = () => ({
-            video: true,
+            video: { facingMode: 'user' },
             audio: true
         });
 
@@ -2892,20 +2891,47 @@
             try {
                 // Show loading overlay
                 loadingText.textContent = 'Getting camera ready...';
-                loadingSubtext.textContent = 'Please allow camera and microphone access';
+                loadingSubtext.textContent = 'Requesting camera access';
                 loadingOverlay.classList.add('active');
                 
                 console.log('📹 Requesting camera access...');
 
+                // Progressive fallback with timeout for mobile
+                const getCameraWithTimeout = async (constraints, timeoutMs = 8000) => {
+                    return Promise.race([
+                        navigator.mediaDevices.getUserMedia(constraints),
+                        new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('Camera timeout')), timeoutMs)
+                        )
+                    ]);
+                };
+
                 try {
-                    localStream = await navigator.mediaDevices.getUserMedia(getMobileVideoConstraints());
+                    // Try primary constraints with 8 second timeout
+                    loadingSubtext.textContent = 'Please allow camera and microphone';
+                    localStream = await getCameraWithTimeout(getMobileVideoConstraints(), 8000);
+                    console.log('✅ Camera access granted (primary)');
                 } catch (firstErr) {
-                    console.warn('⚠️ Failed with ideal constraints, trying basic constraints...', firstErr);
-                    // Fallback to basic constraints
-                    localStream = await navigator.mediaDevices.getUserMedia(getBasicVideoConstraints());
+                    console.warn('⚠️ Primary failed, trying simplified...', firstErr.message);
+                    try {
+                        // Try simplified constraints with 5 second timeout
+                        loadingSubtext.textContent = 'Connecting to camera...';
+                        localStream = await getCameraWithTimeout(getBasicVideoConstraints(), 5000);
+                        console.log('✅ Camera access granted (basic)');
+                    } catch (secondErr) {
+                        console.warn('⚠️ Basic failed, trying minimal...', secondErr.message);
+                        // Last resort: absolute minimal constraints, 3 second timeout
+                        loadingSubtext.textContent = 'Almost ready...';
+                        localStream = await getCameraWithTimeout({
+                            video: true,
+                            audio: true
+                        }, 3000);
+                        console.log('✅ Camera access granted (minimal)');
+                    }
                 }
                 
-                console.log('✅ Camera access granted');
+                console.log('✅ Camera ready');
+                loadingSubtext.textContent = 'Camera ready!';
 
                 localVideo.srcObject = localStream;
                 
