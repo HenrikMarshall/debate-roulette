@@ -2274,6 +2274,41 @@
             identifyUser(currentUser); // Track guest
         }
 
+        // Check available devices on page load
+        async function checkDevices() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(d => d.kind === 'videoinput');
+                const audioDevices = devices.filter(d => d.kind === 'audioinput');
+                
+                console.log('📹 Device check:', {
+                    video: videoDevices.length,
+                    audio: audioDevices.length,
+                    videoDevices: videoDevices.map(d => d.label || 'Unknown camera'),
+                    audioDevices: audioDevices.map(d => d.label || 'Unknown microphone')
+                });
+                
+                if (videoDevices.length === 0 || audioDevices.length === 0) {
+                    const status = document.getElementById('connectionStatus');
+                    if (videoDevices.length === 0 && audioDevices.length === 0) {
+                        status.textContent = '⚠️ No camera or microphone detected - check system settings';
+                        status.style.color = '#ff6b6b';
+                    } else if (videoDevices.length === 0) {
+                        status.textContent = '⚠️ No camera detected - please connect a camera';
+                        status.style.color = '#ff6b6b';
+                    } else if (audioDevices.length === 0) {
+                        status.textContent = '⚠️ No microphone detected - please connect a microphone';
+                        status.style.color = '#ff6b6b';
+                    }
+                }
+            } catch (err) {
+                console.warn('Could not check devices:', err);
+            }
+        }
+        
+        // Run device check on page load
+        checkDevices();
+        
         // State
         let socket;
         let localStream = null;
@@ -2996,17 +3031,97 @@
                 
                 let errorMsg = '';
                 
-                // Better error messages
-                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                    errorMsg = '📷 Camera access denied.\n\nPlease:\n1. Tap the camera icon in your browser address bar\n2. Allow camera and microphone access\n3. Try again';
-                } else if (err.name === 'NotFoundError') {
-                    errorMsg = '📷 No camera or microphone found.\n\nPlease check your device settings.';
-                } else if (err.name === 'NotReadableError') {
-                    errorMsg = '📷 Camera is being used by another app.\n\nPlease close other apps and try again.';
-                } else if (!isHTTPS && !isLocalhost) {
-                    errorMsg = '🔒 Camera requires HTTPS connection.\n\nPlease use a secure connection to access the camera.';
-                } else {
-                    errorMsg = `📷 Camera error: ${err.message}\n\nPlease check your browser settings and try again.`;
+                // Enumerate devices to provide better error info
+                try {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const videoDevices = devices.filter(d => d.kind === 'videoinput');
+                    const audioDevices = devices.filter(d => d.kind === 'audioinput');
+                    
+                    console.log('📹 Available devices:', {
+                        video: videoDevices.length,
+                        audio: audioDevices.length,
+                        allDevices: devices
+                    });
+                    
+                    // Better error messages based on what's available
+                    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                        errorMsg = '📷 Camera/Microphone Access Denied\n\n';
+                        errorMsg += 'Please allow access:\n';
+                        errorMsg += '1. Click the camera icon 🎥 in your browser address bar\n';
+                        errorMsg += '2. Select "Always allow"\n';
+                        errorMsg += '3. Refresh the page and try again\n\n';
+                        errorMsg += 'Or check:\n';
+                        errorMsg += '• Browser Settings → Privacy → Camera/Microphone\n';
+                        if (navigator.userAgent.includes('Mac')) {
+                            errorMsg += '• System Preferences → Security & Privacy → Camera/Microphone';
+                        } else if (navigator.userAgent.includes('Windows')) {
+                            errorMsg += '• Windows Settings → Privacy → Camera/Microphone';
+                        }
+                    } else if (err.name === 'NotFoundError') {
+                        if (videoDevices.length === 0 && audioDevices.length === 0) {
+                            errorMsg = '📷 No Camera or Microphone Detected\n\n';
+                            errorMsg += 'Please check:\n';
+                            errorMsg += '• Is your camera/mic connected?\n';
+                            errorMsg += '• Try unplugging and reconnecting\n';
+                            errorMsg += '• Check if another app is using them\n';
+                            errorMsg += '• Restart your browser\n\n';
+                            if (navigator.userAgent.includes('Mac')) {
+                                errorMsg += 'Mac: System Preferences → Security & Privacy\n';
+                                errorMsg += 'Make sure browser has camera/mic access';
+                            } else if (navigator.userAgent.includes('Windows')) {
+                                errorMsg += 'Windows: Settings → Privacy → Camera/Microphone\n';
+                                errorMsg += 'Make sure browser has access';
+                            }
+                        } else if (videoDevices.length === 0) {
+                            errorMsg = '📷 No Camera Found\n\n';
+                            errorMsg += `Found ${audioDevices.length} microphone(s) but no camera.\n\n`;
+                            errorMsg += 'Please:\n';
+                            errorMsg += '• Connect a camera\n';
+                            errorMsg += '• Check if another app is using it\n';
+                            errorMsg += '• Check system permissions';
+                        } else if (audioDevices.length === 0) {
+                            errorMsg = '🎤 No Microphone Found\n\n';
+                            errorMsg += `Found ${videoDevices.length} camera(s) but no microphone.\n\n`;
+                            errorMsg += 'Please:\n';
+                            errorMsg += '• Connect a microphone\n';
+                            errorMsg += '• Check if another app is using it\n';
+                            errorMsg += '• Check system permissions';
+                        } else {
+                            errorMsg = '📷 Cannot Access Camera/Microphone\n\n';
+                            errorMsg += `Found: ${videoDevices.length} camera(s), ${audioDevices.length} mic(s)\n\n`;
+                            errorMsg += 'But cannot access them. Please:\n';
+                            errorMsg += '• Close other apps using camera/mic\n';
+                            errorMsg += '• Check system permissions\n';
+                            errorMsg += '• Restart your browser';
+                        }
+                    } else if (err.name === 'NotReadableError' || err.name === 'AbortError') {
+                        errorMsg = '📷 Camera In Use\n\n';
+                        errorMsg += 'Your camera is being used by another app.\n\n';
+                        errorMsg += 'Please close:\n';
+                        errorMsg += '• Zoom, Skype, Teams\n';
+                        errorMsg += '• Other browser tabs using camera\n';
+                        errorMsg += '• FaceTime, Photo Booth (Mac)\n';
+                        errorMsg += '• Camera app (Windows)\n\n';
+                        errorMsg += 'Then try again.';
+                    } else if (!isHTTPS && !isLocalhost) {
+                        errorMsg = '🔒 HTTPS Required\n\n';
+                        errorMsg += 'Camera access requires a secure connection.\n\n';
+                        errorMsg += 'Please use HTTPS to access this site.';
+                    } else {
+                        errorMsg = `📷 Camera Error\n\n`;
+                        errorMsg += `Error: ${err.name}\n`;
+                        errorMsg += `Message: ${err.message}\n\n`;
+                        errorMsg += 'Please:\n';
+                        errorMsg += '• Check browser permissions\n';
+                        errorMsg += '• Try a different browser\n';
+                        errorMsg += '• Restart your device';
+                    }
+                } catch (enumErr) {
+                    // Couldn't enumerate devices
+                    console.error('Failed to enumerate devices:', enumErr);
+                    errorMsg = '📷 Camera Access Error\n\n';
+                    errorMsg += `${err.name}: ${err.message}\n\n`;
+                    errorMsg += 'Please check your browser and system permissions.';
                 }
                 
                 alert(errorMsg);
