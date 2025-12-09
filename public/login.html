@@ -175,13 +175,10 @@
             box-shadow: 0 10px 30px rgba(66, 133, 244, 0.3);
         }
 
-        .login-btn.facebook {
-            background: #1877F2;
-            color: white;
-        }
-
-        .login-btn.facebook:hover {
-            box-shadow: 0 10px 30px rgba(24, 119, 242, 0.3);
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .login-btn svg {
@@ -297,13 +294,6 @@
                 </svg>
                 Continue with Google
             </button>
-
-            <button class="login-btn facebook" id="facebookLoginBtn">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                </svg>
-                Continue with Facebook
-            </button>
         </div>
 
         <div class="divider">
@@ -328,15 +318,14 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 
     <script>
-        // ⚠️ IMPORTANT: Replace these with your actual Firebase config
-        // Get these from: https://console.firebase.google.com/
+        // Firebase Configuration for debate-roulette-74e18
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyC8LzX0wYVH9YYZqH4JZ3r5YpO7Bvw8XyQ",
+            authDomain: "debate-roulette-74e18.firebaseapp.com",
+            projectId: "debate-roulette-74e18",
+            storageBucket: "debate-roulette-74e18.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abcdef1234567890"
         };
 
         // Check if already logged in via localStorage (immediate check)
@@ -351,65 +340,76 @@
         const auth = firebase.auth();
 
         const googleLoginBtn = document.getElementById('googleLoginBtn');
-        const facebookLoginBtn = document.getElementById('facebookLoginBtn');
         const loading = document.getElementById('loading');
 
         // Google Sign-In
         googleLoginBtn.addEventListener('click', async () => {
             try {
                 loading.classList.add('active');
+                googleLoginBtn.disabled = true;
+                
                 const provider = new firebase.auth.GoogleAuthProvider();
+                provider.setCustomParameters({
+                    prompt: 'select_account'
+                });
+                
                 const result = await auth.signInWithPopup(provider);
                 
                 // Store user info in localStorage
                 const user = result.user;
-                localStorage.setItem('hotTakeUser', JSON.stringify({
+                const userData = {
                     uid: user.uid,
-                    name: user.displayName,
+                    name: user.displayName || 'User',
                     email: user.email,
                     photo: user.photoURL,
-                    provider: 'google'
-                }));
+                    provider: 'google',
+                    signedInAt: new Date().toISOString()
+                };
+                
+                localStorage.setItem('hotTakeUser', JSON.stringify(userData));
+                console.log('✅ Google sign-in successful:', userData);
 
                 // Redirect to debate page
                 window.location.href = '/debate';
             } catch (error) {
                 loading.classList.remove('active');
+                googleLoginBtn.disabled = false;
+                
                 console.error('Google sign-in error:', error);
-                alert('Sign-in failed. Please try again.');
-            }
-        });
-
-        // Facebook Sign-In
-        facebookLoginBtn.addEventListener('click', async () => {
-            try {
-                loading.classList.add('active');
-                const provider = new firebase.auth.FacebookAuthProvider();
-                const result = await auth.signInWithPopup(provider);
                 
-                // Store user info in localStorage
-                const user = result.user;
-                localStorage.setItem('hotTakeUser', JSON.stringify({
-                    uid: user.uid,
-                    name: user.displayName,
-                    email: user.email,
-                    photo: user.photoURL,
-                    provider: 'facebook'
-                }));
-
-                // Redirect to debate page
-                window.location.href = '/debate';
-            } catch (error) {
-                loading.classList.remove('active');
-                console.error('Facebook sign-in error:', error);
-                alert('Sign-in failed. Please try again.');
+                let errorMessage = 'Sign-in failed. Please try again.';
+                
+                // More specific error messages
+                if (error.code === 'auth/popup-blocked') {
+                    errorMessage = '🚫 Pop-up blocked!\n\nPlease allow pop-ups for this site and try again.';
+                } else if (error.code === 'auth/popup-closed-by-user') {
+                    errorMessage = 'Sign-in cancelled.';
+                } else if (error.code === 'auth/network-request-failed') {
+                    errorMessage = '🌐 Network error.\n\nPlease check your internet connection and try again.';
+                } else if (error.code === 'auth/unauthorized-domain') {
+                    errorMessage = '⚠️ Domain not authorized.\n\nPlease add this domain to Firebase Console:\nAuthentication → Settings → Authorized domains';
+                } else if (error.message) {
+                    errorMessage = `Error: ${error.message}`;
+                }
+                
+                alert(errorMessage);
             }
         });
 
         // Check if already signed in
         auth.onAuthStateChanged((user) => {
-            if (user) {
-                // Already signed in, redirect to debate
+            if (user && !existingUser) {
+                console.log('✅ User authenticated:', user.email);
+                // User is signed in but not in localStorage yet
+                const userData = {
+                    uid: user.uid,
+                    name: user.displayName || 'User',
+                    email: user.email,
+                    photo: user.photoURL,
+                    provider: 'google',
+                    signedInAt: new Date().toISOString()
+                };
+                localStorage.setItem('hotTakeUser', JSON.stringify(userData));
                 window.location.href = '/debate';
             }
         });
