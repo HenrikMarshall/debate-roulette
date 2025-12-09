@@ -2454,11 +2454,30 @@
                     // Initialize WebRTC first
                     await initWebRTC(data.youGoFirst);
                     
-                    // Wait a bit for remote stream to be fully established
+                    // Wait for remote stream to be fully established with audio
+                    const waitForRemoteAudio = () => {
+                        return new Promise((resolve) => {
+                            let attempts = 0;
+                            const checkInterval = setInterval(() => {
+                                attempts++;
+                                if (remoteVideo.srcObject && remoteVideo.srcObject.getAudioTracks().length > 0) {
+                                    console.log('✅ Remote audio confirmed after', attempts * 500, 'ms');
+                                    clearInterval(checkInterval);
+                                    resolve();
+                                } else if (attempts > 10) { // 5 seconds max
+                                    console.warn('⚠️ Starting recording without remote audio confirmation');
+                                    clearInterval(checkInterval);
+                                    resolve();
+                                }
+                            }, 500);
+                        });
+                    };
+                    
+                    // Wait for remote audio, then start recording
+                    await waitForRemoteAudio();
                     setTimeout(() => {
-                        // Start recording the entire debate automatically
                         startRecording();
-                    }, 1000);  // 1 second delay to ensure remote audio is connected
+                    }, 500); // Small additional delay after audio confirmed
                 });
 
                 socket.on('emoji-received', ({ emoji, from }) => {
@@ -3609,27 +3628,99 @@
                 
                 // Mobile-friendly download
                 if (isMobile) {
-                    // For iOS Safari, open in new window
+                    // For mobile, we'll show the video in a way users can save to camera roll
                     if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                        // iOS: Show video with instructions to save
                         const reader = new FileReader();
                         reader.onloadend = () => {
-                            const a = document.createElement('a');
-                            a.href = reader.result;
-                            a.download = filename;
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
-                            URL.revokeObjectURL(url);
+                            // Create a temporary page to show the video
+                            const videoUrl = reader.result;
+                            const newWindow = window.open('', '_blank');
+                            if (newWindow) {
+                                newWindow.document.write(`
+                                    <!DOCTYPE html>
+                                    <html>
+                                    <head>
+                                        <meta name="viewport" content="width=device-width, initial-scale=1">
+                                        <style>
+                                            body {
+                                                margin: 0;
+                                                padding: 20px;
+                                                background: #000;
+                                                color: #fff;
+                                                font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+                                                text-align: center;
+                                            }
+                                            video {
+                                                max-width: 100%;
+                                                max-height: 70vh;
+                                                margin: 20px 0;
+                                                border-radius: 12px;
+                                            }
+                                            .instructions {
+                                                background: rgba(255,255,255,0.1);
+                                                padding: 20px;
+                                                border-radius: 12px;
+                                                margin: 20px 0;
+                                            }
+                                            h2 { color: #00ff88; }
+                                            .step {
+                                                text-align: left;
+                                                margin: 10px 0;
+                                                padding-left: 30px;
+                                            }
+                                            a {
+                                                display: inline-block;
+                                                padding: 15px 30px;
+                                                background: #00ff88;
+                                                color: #000;
+                                                text-decoration: none;
+                                                border-radius: 10px;
+                                                font-weight: bold;
+                                                margin: 20px 0;
+                                            }
+                                        </style>
+                                    </head>
+                                    <body>
+                                        <h2>📹 Your Debate Recording</h2>
+                                        <video src="${videoUrl}" controls playsinline></video>
+                                        <div class="instructions">
+                                            <h3>💾 Save to Camera Roll:</h3>
+                                            <div class="step">1. Tap and hold the video above</div>
+                                            <div class="step">2. Select "Save Video" or "Add to Photos"</div>
+                                            <div class="step">3. Video will save to your Photos app!</div>
+                                        </div>
+                                        <a href="#" onclick="document.querySelector('video').play(); return false;">▶️ Play Video</a>
+                                        <p style="margin-top: 30px; opacity: 0.7;">Close this tab when done</p>
+                                    </body>
+                                    </html>
+                                `);
+                                newWindow.document.close();
+                            } else {
+                                // Fallback: try download attribute
+                                const a = document.createElement('a');
+                                a.href = videoUrl;
+                                a.download = filename;
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                            }
                         };
                         reader.readAsDataURL(blob);
                     } else {
-                        // Android Chrome
+                        // Android: Standard download
                         const link = document.createElement('a');
                         link.style.display = 'none';
                         link.download = filename;
                         link.href = url;
                         document.body.appendChild(link);
                         link.click();
+                        
+                        // Show instructions for Android
+                        setTimeout(() => {
+                            alert('📹 Video Downloaded!\n\nFind it in:\n• Files app → Downloads folder\n• Or check notification\n\nTip: Move to Gallery to share easily!');
+                        }, 500);
+                        
                         setTimeout(() => {
                             document.body.removeChild(link);
                             URL.revokeObjectURL(url);
@@ -3680,12 +3771,36 @@
                     if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
                         const reader = new FileReader();
                         reader.onloadend = () => {
-                            const a = document.createElement('a');
-                            a.href = reader.result;
-                            a.download = filename;
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
+                            const videoUrl = reader.result;
+                            const newWindow = window.open('', '_blank');
+                            if (newWindow) {
+                                newWindow.document.write(`
+                                    <!DOCTYPE html>
+                                    <html>
+                                    <head>
+                                        <meta name="viewport" content="width=device-width, initial-scale=1">
+                                        <style>
+                                            body { margin: 0; padding: 20px; background: #000; color: #fff; font-family: -apple-system, sans-serif; text-align: center; }
+                                            video { max-width: 100%; max-height: 70vh; margin: 20px 0; border-radius: 12px; }
+                                            .instructions { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 12px; margin: 20px 0; }
+                                            h2 { color: #00ff88; }
+                                            .step { text-align: left; margin: 10px 0; padding-left: 30px; }
+                                        </style>
+                                    </head>
+                                    <body>
+                                        <h2>📹 Your Debate Recording</h2>
+                                        <video src="${videoUrl}" controls playsinline></video>
+                                        <div class="instructions">
+                                            <h3>💾 Save to Camera Roll:</h3>
+                                            <div class="step">1. Tap and hold the video above</div>
+                                            <div class="step">2. Select "Save Video"</div>
+                                            <div class="step">3. Video saves to Photos!</div>
+                                        </div>
+                                    </body>
+                                    </html>
+                                `);
+                                newWindow.document.close();
+                            }
                         };
                         reader.readAsDataURL(blob);
                     } else {
@@ -3695,6 +3810,9 @@
                         link.href = url;
                         document.body.appendChild(link);
                         link.click();
+                        setTimeout(() => {
+                            alert('📹 Downloaded! Check Files → Downloads');
+                        }, 500);
                         setTimeout(() => {
                             document.body.removeChild(link);
                             URL.revokeObjectURL(url);
