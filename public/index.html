@@ -2277,6 +2277,23 @@
         // Check available devices on page load
         async function checkDevices() {
             try {
+                // Detect incognito/guest mode
+                const isIncognito = await (async () => {
+                    try {
+                        // Try to use FileSystem API (blocked in incognito)
+                        if ('storage' in navigator && 'estimate' in navigator.storage) {
+                            const {usage, quota} = await navigator.storage.estimate();
+                            // In incognito, quota is usually very low
+                            if (quota < 120000000) { // Less than 120MB suggests incognito
+                                return true;
+                            }
+                        }
+                        return false;
+                    } catch {
+                        return false;
+                    }
+                })();
+                
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const videoDevices = devices.filter(d => d.kind === 'videoinput');
                 const audioDevices = devices.filter(d => d.kind === 'audioinput');
@@ -2284,14 +2301,30 @@
                 console.log('📹 Device check:', {
                     video: videoDevices.length,
                     audio: audioDevices.length,
+                    incognito: isIncognito,
                     videoDevices: videoDevices.map(d => d.label || 'Unknown camera'),
                     audioDevices: audioDevices.map(d => d.label || 'Unknown microphone')
                 });
                 
+                const status = document.getElementById('connectionStatus');
+                
+                // Show warning for incognito mode
+                if (isIncognito) {
+                    status.innerHTML = `
+                        ⚠️ Incognito/Guest Mode Detected<br>
+                        <span style="font-size: 0.85rem; opacity: 0.8;">
+                        Camera may be blocked. Click the camera icon 🎥 in address bar to allow.
+                        </span>
+                    `;
+                    status.style.color = '#ffa500';
+                }
+                
                 if (videoDevices.length === 0 || audioDevices.length === 0) {
-                    const status = document.getElementById('connectionStatus');
                     if (videoDevices.length === 0 && audioDevices.length === 0) {
-                        status.textContent = '⚠️ No camera or microphone detected - check system settings';
+                        status.innerHTML = `
+                            ⚠️ No camera or microphone detected
+                            ${isIncognito ? '<br><span style="font-size: 0.85rem;">Guest mode may block access - check browser settings</span>' : ''}
+                        `;
                         status.style.color = '#ff6b6b';
                     } else if (videoDevices.length === 0) {
                         status.textContent = '⚠️ No camera detected - please connect a camera';
@@ -3065,16 +3098,39 @@
                     // Better error messages based on what's available
                     if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
                         errorMsg = '📷 Camera/Microphone Access Denied\n\n';
-                        errorMsg += 'Please allow access:\n';
-                        errorMsg += '1. Click the camera icon 🎥 in your browser address bar\n';
-                        errorMsg += '2. Select "Always allow"\n';
-                        errorMsg += '3. Refresh the page and try again\n\n';
-                        errorMsg += 'Or check:\n';
-                        errorMsg += '• Browser Settings → Privacy → Camera/Microphone\n';
-                        if (navigator.userAgent.includes('Mac')) {
-                            errorMsg += '• System Preferences → Security & Privacy → Camera/Microphone';
-                        } else if (navigator.userAgent.includes('Windows')) {
-                            errorMsg += '• Windows Settings → Privacy → Camera/Microphone';
+                        
+                        // Check for incognito/guest mode
+                        const isIncognitoMode = await (async () => {
+                            try {
+                                if ('storage' in navigator && 'estimate' in navigator.storage) {
+                                    const {quota} = await navigator.storage.estimate();
+                                    return quota < 120000000;
+                                }
+                                return false;
+                            } catch { return false; }
+                        })();
+                        
+                        if (isIncognitoMode) {
+                            errorMsg += '⚠️ INCOGNITO/GUEST MODE DETECTED\n\n';
+                            errorMsg += 'Camera is blocked by default in incognito.\n\n';
+                            errorMsg += 'To Fix:\n';
+                            errorMsg += '1. Look for camera icon 🎥 in address bar (usually blocked 🚫)\n';
+                            errorMsg += '2. Click the icon\n';
+                            errorMsg += '3. Select "Allow" or "Always allow"\n';
+                            errorMsg += '4. Try "Find Opponent" again\n\n';
+                            errorMsg += 'OR exit guest mode and use normal browsing.\n';
+                        } else {
+                            errorMsg += 'Please allow access:\n';
+                            errorMsg += '1. Click the camera icon 🎥 in your browser address bar\n';
+                            errorMsg += '2. Select "Always allow"\n';
+                            errorMsg += '3. Refresh the page and try again\n\n';
+                            errorMsg += 'Or check:\n';
+                            errorMsg += '• Browser Settings → Privacy → Camera/Microphone\n';
+                            if (navigator.userAgent.includes('Mac')) {
+                                errorMsg += '• System Preferences → Security & Privacy → Camera/Microphone';
+                            } else if (navigator.userAgent.includes('Windows')) {
+                                errorMsg += '• Windows Settings → Privacy → Camera/Microphone';
+                            }
                         }
                     } else if (err.name === 'NotFoundError') {
                         if (videoDevices.length === 0 && audioDevices.length === 0) {
