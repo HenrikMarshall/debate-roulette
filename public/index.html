@@ -485,6 +485,328 @@
             cursor: not-allowed;
         }
 
+        /* ═══════════════════════════════════════════════════════════
+           PREMIUM FEATURES STYLING
+           ═══════════════════════════════════════════════════════════ */
+        
+        /* Premium Badge */
+        .premium-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #0a0a0f;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-family: 'Syne', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 800;
+            border: none;
+            cursor: default;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+            animation: shimmer 2s infinite;
+        }
+
+        .crown-icon {
+            font-size: 1.1rem;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4); }
+            50% { box-shadow: 0 6px 25px rgba(255, 215, 0, 0.6); }
+        }
+
+        /* Upgrade Button */
+        .upgrade-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #0a0a0f;
+            padding: 10px 24px;
+            border-radius: 25px;
+            font-family: 'Syne', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+        }
+
+        .upgrade-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(255, 215, 0, 0.5);
+        }
+
+        /* Premium Modal */
+        .premium-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 4000;
+            padding: 20px;
+        }
+
+        .premium-modal.active {
+            display: flex;
+        }
+
+        .premium-card {
+            background: linear-gradient(180deg, #1a1a24 0%, #0a0a0f 100%);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .premium-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .premium-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .premium-subtitle {
+            color: var(--text-dim);
+            font-size: 1.1rem;
+        }
+
+        .premium-price {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .price-amount {
+            font-family: 'Syne', sans-serif;
+            font-size: 3rem;
+            font-weight: 800;
+            color: #FFD700;
+        }
+
+        .price-period {
+            color: var(--text-dim);
+            font-size: 1.2rem;
+        }
+
+        .premium-features {
+            margin: 30px 0;
+        }
+
+        .premium-feature {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .premium-feature:hover {
+            background: rgba(255, 215, 0, 0.1);
+            transform: translateX(5px);
+        }
+
+        .feature-icon {
+            font-size: 1.5rem;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .feature-content h4 {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+            color: var(--text);
+        }
+
+        .feature-content p {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        .premium-cta {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .premium-cta button {
+            flex: 1;
+            padding: 18px;
+            border-radius: 12px;
+            font-family: 'Syne', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .subscribe-btn {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #0a0a0f;
+        }
+
+        .subscribe-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(255, 215, 0, 0.5);
+        }
+
+        .cancel-premium-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .cancel-premium-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Topic Selection Modal */
+        .topic-select-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 4000;
+            padding: 20px;
+        }
+
+        .topic-select-modal.active {
+            display: flex;
+        }
+
+        .topic-select-card {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 700px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .topic-categories {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .topic-category {
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .topic-category:hover {
+            background: rgba(99, 102, 255, 0.2);
+            border-color: var(--secondary);
+            transform: translateY(-3px);
+        }
+
+        .category-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .category-name {
+            font-family: 'Syne', sans-serif;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .category-count {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+        }
+
+        /* Analytics Panel */
+        .analytics-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+
+        .analytics-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+        }
+
+        .stat-value {
+            font-family: 'Syne', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--accent);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        /* Pro indicator on features */
+        .pro-only {
+            opacity: 0.5;
+            pointer-events: none;
+            position: relative;
+        }
+
+        .pro-only::after {
+            content: '👑 PRO';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #0a0a0f;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
         /* Social Sharing */
         .social-buttons {
             display: flex;
@@ -1232,6 +1554,12 @@
         <header>
             <h1><a href="/" style="color: inherit; text-decoration: none; cursor: pointer;">HOT TAKE</a></h1>
             <p class="subtitle">Random Video Debates • 30 Seconds Each Side</p>
+            <button class="premium-badge" id="premiumBadge" style="display: none;">
+                <span class="crown-icon">👑</span> PRO
+            </button>
+            <button class="upgrade-btn" id="upgradeBtn">
+                ✨ Upgrade to PRO
+            </button>
         </header>
 
         <div class="connection-status" id="connectionStatus">
@@ -1442,6 +1770,135 @@
                         Cancel
                     </button>
                 </div>
+            </div>
+        </div>
+
+        <!-- Premium Upgrade Modal -->
+        <div class="premium-modal" id="premiumModal">
+            <div class="premium-card">
+                <div class="premium-header">
+                    <div class="premium-title">👑 Hot Take PRO</div>
+                    <div class="premium-subtitle">Unlock the ultimate debate experience</div>
+                </div>
+
+                <div class="premium-price">
+                    <div class="price-amount">$4.99</div>
+                    <div class="price-period">per month</div>
+                </div>
+
+                <div class="premium-features">
+                    <div class="premium-feature">
+                        <div class="feature-icon">⚡</div>
+                        <div class="feature-content">
+                            <h4>Skip the Queue</h4>
+                            <p>Get instant matches - no waiting</p>
+                        </div>
+                    </div>
+
+                    <div class="premium-feature">
+                        <div class="feature-icon">🎯</div>
+                        <div class="feature-content">
+                            <h4>Choose Topics</h4>
+                            <p>Pick from categories or search topics</p>
+                        </div>
+                    </div>
+
+                    <div class="premium-feature">
+                        <div class="feature-icon">📊</div>
+                        <div class="feature-content">
+                            <h4>Analytics Dashboard</h4>
+                            <p>Track wins, losses, and debate stats</p>
+                        </div>
+                    </div>
+
+                    <div class="premium-feature">
+                        <div class="feature-icon">🎨</div>
+                        <div class="feature-content">
+                            <h4>Profile Customization</h4>
+                            <p>Avatars, badges, themes, and more</p>
+                        </div>
+                    </div>
+
+                    <div class="premium-feature">
+                        <div class="feature-icon">🚫</div>
+                        <div class="feature-content">
+                            <h4>Ad-Free Experience</h4>
+                            <p>Clean interface with no interruptions</p>
+                        </div>
+                    </div>
+
+                    <div class="premium-feature">
+                        <div class="feature-icon">🔄</div>
+                        <div class="feature-content">
+                            <h4>Rematch Feature</h4>
+                            <p>Debate the same person again instantly</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="premium-cta">
+                    <button class="subscribe-btn" id="subscribeBtn">
+                        👑 Upgrade Now
+                    </button>
+                    <button class="cancel-premium-btn" id="cancelPremiumBtn">
+                        Maybe Later
+                    </button>
+                </div>
+
+                <p style="text-align: center; color: var(--text-dim); font-size: 0.85rem; margin-top: 20px;">
+                    Cancel anytime • Secure payment via Stripe
+                </p>
+            </div>
+        </div>
+
+        <!-- Topic Selection Modal (PRO Only) -->
+        <div class="topic-select-modal" id="topicSelectModal">
+            <div class="topic-select-card">
+                <h2 style="font-family: 'Syne', sans-serif; margin-bottom: 20px;">
+                    🎯 Choose Your Topic
+                </h2>
+
+                <div class="topic-categories">
+                    <div class="topic-category" data-category="politics">
+                        <div class="category-icon">🏛️</div>
+                        <div class="category-name">Politics</div>
+                        <div class="category-count">25 topics</div>
+                    </div>
+
+                    <div class="topic-category" data-category="technology">
+                        <div class="category-icon">💻</div>
+                        <div class="category-name">Technology</div>
+                        <div class="category-count">20 topics</div>
+                    </div>
+
+                    <div class="topic-category" data-category="social">
+                        <div class="category-icon">👥</div>
+                        <div class="category-name">Social Issues</div>
+                        <div class="category-count">18 topics</div>
+                    </div>
+
+                    <div class="topic-category" data-category="culture">
+                        <div class="category-icon">🎭</div>
+                        <div class="category-name">Pop Culture</div>
+                        <div class="category-count">15 topics</div>
+                    </div>
+
+                    <div class="topic-category" data-category="economics">
+                        <div class="category-icon">💰</div>
+                        <div class="category-name">Economics</div>
+                        <div class="category-count">12 topics</div>
+                    </div>
+
+                    <div class="topic-category" data-category="environment">
+                        <div class="category-icon">🌍</div>
+                        <div class="category-name">Environment</div>
+                        <div class="category-count">10 topics</div>
+                    </div>
+                </div>
+
+                <button class="debate-end-btn secondary" id="closeTopicSelectBtn" style="margin-top: 20px;">
+                    Cancel
+                </button>
             </div>
         </div>
 
@@ -3358,6 +3815,262 @@
             });
         });
 
+        // ═══════════════════════════════════════════════════════════
+        // PREMIUM FEATURES
+        // ═══════════════════════════════════════════════════════════
+        
+        // Premium state management
+        let isPremiumUser = false;
+        let premiumUntil = null;
+        
+        // Check premium status from localStorage
+        function checkPremiumStatus() {
+            const premiumData = localStorage.getItem('hotTakePremium');
+            if (premiumData) {
+                const data = JSON.parse(premiumData);
+                const now = Date.now();
+                
+                // Check if premium is still valid
+                if (data.until && now < data.until) {
+                    isPremiumUser = true;
+                    premiumUntil = data.until;
+                    showPremiumBadge();
+                    console.log('👑 Premium user detected');
+                    return true;
+                }
+            }
+            isPremiumUser = false;
+            showUpgradeButton();
+            return false;
+        }
+        
+        // Show premium badge
+        function showPremiumBadge() {
+            const premiumBadge = document.getElementById('premiumBadge');
+            const upgradeBtn = document.getElementById('upgradeBtn');
+            
+            if (premiumBadge && upgradeBtn) {
+                premiumBadge.style.display = 'flex';
+                upgradeBtn.style.display = 'none';
+            }
+        }
+        
+        // Show upgrade button
+        function showUpgradeButton() {
+            const premiumBadge = document.getElementById('premiumBadge');
+            const upgradeBtn = document.getElementById('upgradeBtn');
+            
+            if (premiumBadge && upgradeBtn) {
+                premiumBadge.style.display = 'none';
+                upgradeBtn.style.display = 'block';
+            }
+        }
+        
+        // Premium Modal Handlers
+        const premiumModal = document.getElementById('premiumModal');
+        const upgradeBtn = document.getElementById('upgradeBtn');
+        const subscribeBtn = document.getElementById('subscribeBtn');
+        const cancelPremiumBtn = document.getElementById('cancelPremiumBtn');
+        
+        // Open premium modal
+        upgradeBtn.addEventListener('click', () => {
+            premiumModal.classList.add('active');
+            
+            trackEvent('Premium Modal Opened', {
+                'From': 'Header Button'
+            });
+        });
+        
+        // Subscribe button (for now, just simulate - Stripe integration next)
+        subscribeBtn.addEventListener('click', () => {
+            // TODO: Integrate Stripe Checkout
+            // For now, simulate premium activation (FOR TESTING)
+            activatePremium(30); // 30 days
+            
+            trackEvent('Premium Subscribe Clicked', {
+                'Plan': 'Monthly $4.99'
+            });
+        });
+        
+        // Close premium modal
+        cancelPremiumBtn.addEventListener('click', () => {
+            premiumModal.classList.remove('active');
+        });
+        
+        // Activate premium (simulate for now)
+        function activatePremium(days) {
+            const until = Date.now() + (days * 24 * 60 * 60 * 1000);
+            
+            localStorage.setItem('hotTakePremium', JSON.stringify({
+                active: true,
+                until: until,
+                plan: 'monthly',
+                activatedAt: new Date().toISOString()
+            }));
+            
+            isPremiumUser = true;
+            premiumUntil = until;
+            
+            premiumModal.classList.remove('active');
+            showPremiumBadge();
+            
+            // Track in Mixpanel
+            trackEvent('Premium Activated', {
+                'Plan': 'Monthly $4.99',
+                'Days': days
+            });
+            
+            if (typeof mixpanel !== 'undefined' && mixpanel.people) {
+                mixpanel.people.set({
+                    'Premium': true,
+                    'Premium Until': new Date(until).toISOString()
+                });
+            }
+            
+            alert('🎉 Welcome to Hot Take PRO!\n\nAll premium features are now unlocked!');
+            console.log('👑 Premium activated until:', new Date(until).toISOString());
+        }
+        
+        // Topic Selection (PRO feature)
+        const topicSelectModal = document.getElementById('topicSelectModal');
+        const closeTopicSelectBtn = document.getElementById('closeTopicSelectBtn');
+        let selectedCategory = null;
+        
+        // Open topic selector (check if premium)
+        function openTopicSelector() {
+            if (!isPremiumUser) {
+                premiumModal.classList.add('active');
+                trackEvent('Premium Feature Blocked', {
+                    'Feature': 'Topic Selection',
+                    'Action': 'Showed Upgrade Modal'
+                });
+                return;
+            }
+            
+            topicSelectModal.classList.add('active');
+            trackEvent('Topic Selection Opened');
+        }
+        
+        // Topic category selection
+        document.querySelectorAll('.topic-category').forEach(category => {
+            category.addEventListener('click', () => {
+                selectedCategory = category.getAttribute('data-category');
+                
+                trackEvent('Topic Category Selected', {
+                    'Category': selectedCategory
+                });
+                
+                // Send to backend to match with this category
+                socket.emit('find-opponent-with-category', {
+                    category: selectedCategory,
+                    isPremium: true
+                });
+                
+                topicSelectModal.classList.remove('active');
+                loadingOverlay.classList.add('active');
+                loadingText.textContent = 'Finding opponent...';
+                loadingSubtext.textContent = `Category: ${selectedCategory}`;
+            });
+        });
+        
+        closeTopicSelectBtn.addEventListener('click', () => {
+            topicSelectModal.classList.remove('active');
+        });
+        
+        // Rematch Feature (PRO feature)
+        let lastOpponentForRematch = null;
+        
+        function requestRematch() {
+            if (!isPremiumUser) {
+                premiumModal.classList.add('active');
+                trackEvent('Premium Feature Blocked', {
+                    'Feature': 'Rematch',
+                    'Action': 'Showed Upgrade Modal'
+                });
+                return;
+            }
+            
+            if (!lastOpponentForRematch) {
+                alert('No recent opponent available for rematch');
+                return;
+            }
+            
+            trackEvent('Rematch Requested', {
+                'Opponent': lastOpponentForRematch
+            });
+            
+            socket.emit('request-rematch', {
+                opponentSocketId: lastOpponentForRematch,
+                isPremium: true
+            });
+            
+            loadingOverlay.classList.add('active');
+            loadingText.textContent = 'Requesting rematch...';
+            loadingSubtext.textContent = 'Waiting for opponent to accept';
+        }
+        
+        // Update lastOpponentForRematch after each debate
+        socket.on('debate-matched', (data) => {
+            lastOpponentForRematch = data.opponentId;
+        });
+        
+        // Analytics tracking for premium users
+        let userStats = {
+            totalDebates: 0,
+            wins: 0,
+            losses: 0,
+            avgDuration: 0,
+            favoriteTopics: [],
+            totalTime: 0
+        };
+        
+        // Update stats after each debate
+        function updateUserStats(debateData) {
+            userStats.totalDebates++;
+            userStats.totalTime += debateData.duration;
+            userStats.avgDuration = Math.floor(userStats.totalTime / userStats.totalDebates);
+            
+            // Save to localStorage
+            localStorage.setItem('hotTakeStats', JSON.stringify(userStats));
+            
+            // Track in Mixpanel for premium users
+            if (isPremiumUser && typeof mixpanel !== 'undefined' && mixpanel.people) {
+                mixpanel.people.set({
+                    'Total Debates': userStats.totalDebates,
+                    'Avg Debate Duration': userStats.avgDuration
+                });
+            }
+        }
+        
+        // Load stats from localStorage
+        function loadUserStats() {
+            const savedStats = localStorage.getItem('hotTakeStats');
+            if (savedStats) {
+                userStats = JSON.parse(savedStats);
+            }
+        }
+        
+        // Show analytics panel (PRO feature)
+        function showAnalytics() {
+            if (!isPremiumUser) {
+                premiumModal.classList.add('active');
+                trackEvent('Premium Feature Blocked', {
+                    'Feature': 'Analytics',
+                    'Action': 'Showed Upgrade Modal'
+                });
+                return;
+            }
+            
+            // Show analytics in modal or redirect to profile
+            alert(`📊 Your Stats:\n\nTotal Debates: ${userStats.totalDebates}\nAverage Duration: ${userStats.avgDuration}s\n\n(Full analytics dashboard coming soon!)`);
+            
+            trackEvent('Analytics Viewed');
+        }
+        
+        // Check premium status on load
+        checkPremiumStatus();
+        loadUserStats();
+        
         // Initialize on load
         init();
     </script>

@@ -289,6 +289,57 @@ function getRandomTopic() {
     return topics[Math.floor(Math.random() * topics.length)];
 }
 
+// Get topic by category (PRO feature)
+function getTopicByCategory(category) {
+    const categoryMap = {
+        'politics': [
+            'Capitalism is broken and needs to be replaced',
+            'Democracy is failing in the modern world',
+            'Social media should be regulated by government',
+            'Universal basic income would solve poverty',
+            'Voting should be mandatory',
+        ],
+        'technology': [
+            'AI will destroy more jobs than it creates',
+            'Social media does more harm than good',
+            'Privacy is dead in the digital age',
+            'Cryptocurrency is the future of money',
+            'TikTok should be banned worldwide',
+        ],
+        'social': [
+            'Cancel culture has gone too far',
+            'Political correctness is destroying free speech',
+            'Religion does more harm than good',
+            'Marriage is an outdated institution',
+            'Having children is selfish in 2024',
+        ],
+        'culture': [
+            'Modern art is pretentious garbage',
+            'Movies are better than books',
+            'Pineapple belongs on pizza',
+            'Video games are a waste of time',
+            'Reality TV is ruining society',
+        ],
+        'economics': [
+            'Billionaires should not exist',
+            'College should be free for everyone',
+            'Minimum wage should be $25/hour',
+            'Landlords are parasites',
+            'Tipping culture needs to end',
+        ],
+        'environment': [
+            'Climate change is exaggerated',
+            'Nuclear power is the solution',
+            'Veganism is the only ethical diet',
+            'Population control is necessary',
+            'Recycling is mostly a scam',
+        ]
+    };
+    
+    const categoryTopics = categoryMap[category] || topics;
+    return categoryTopics[Math.floor(Math.random() * categoryTopics.length)];
+}
+
 // Get random side
 function getRandomSide() {
     return Math.random() > 0.5 ? 'PRO' : 'CON';
@@ -914,6 +965,184 @@ io.on('connection', (socket) => {
                 message: 'Opponent declined to skip topic'
             });
         }
+    });
+
+    // ═══════════════════════════════════════════════════════════
+    // PREMIUM FEATURES
+    // ═══════════════════════════════════════════════════════════
+    
+    // Find opponent with topic category (PRO feature)
+    socket.on('find-opponent-with-category', (data) => {
+        const { category, isPremium } = data;
+        
+        if (!isPremium) {
+            socket.emit('error', { message: 'Premium feature - upgrade to PRO' });
+            return;
+        }
+        
+        console.log(`👑 PRO: ${socket.id} searching with category: ${category}`);
+        
+        // For now, just find any opponent (category filtering can be added later)
+        // Trigger normal find-opponent flow
+        socket.emit('searching', { message: `Finding opponent in ${category}...` });
+        
+        // Add to queue
+        waitingUsers.add(socket.id);
+        
+        // Try to match
+        if (waitingUsers.size >= 2) {
+            const usersArray = Array.from(waitingUsers);
+            const user1Id = usersArray[0];
+            const user2Id = usersArray[1];
+            
+            // Check blocks
+            if (areUsersBlocked(user1Id, user2Id)) {
+                console.log(`🚫 Users blocked - skipping match`);
+                return;
+            }
+            
+            waitingUsers.delete(user1Id);
+            waitingUsers.delete(user2Id);
+            
+            // Create debate with topic from selected category
+            const debateId = generateDebateId();
+            const topic = getTopicByCategory(category); // Use category-specific topic
+            const user1Side = getRandomSide();
+            const user2Side = user1Side === 'PRO' ? 'CON' : 'PRO';
+            const firstSpeaker = Math.random() > 0.5 ? user1Id : user2Id;
+            
+            const debate = {
+                id: debateId,
+                user1: user1Id,
+                user2: user2Id,
+                topic: topic,
+                user1Side: user1Side,
+                user2Side: user2Side,
+                currentSpeaker: firstSpeaker,
+                timeStarted: Date.now(),
+                round: 1,
+                spectators: [],
+                votes: {},
+                category: category // Track category
+            };
+            
+            activeDebates.set(debateId, debate);
+            
+            userSockets.get(user1Id).currentDebate = debateId;
+            userSockets.get(user2Id).currentDebate = debateId;
+            
+            io.sockets.sockets.get(user1Id)?.join(debateId);
+            io.sockets.sockets.get(user2Id)?.join(debateId);
+            
+            io.to(user1Id).emit('debate-matched', {
+                debateId: debateId,
+                opponentId: user2Id,
+                topic: topic,
+                yourSide: user1Side,
+                firstSpeaker: firstSpeaker,
+                youGoFirst: firstSpeaker === user1Id,
+                round: 1,
+                category: category
+            });
+            
+            io.to(user2Id).emit('debate-matched', {
+                debateId: debateId,
+                opponentId: user1Id,
+                topic: topic,
+                yourSide: user2Side,
+                firstSpeaker: firstSpeaker,
+                youGoFirst: firstSpeaker === user2Id,
+                round: 1,
+                category: category
+            });
+            
+            console.log(`👑 PRO Match created: ${debateId} (${category})`);
+        }
+    });
+    
+    // Request rematch (PRO feature)
+    socket.on('request-rematch', (data) => {
+        const { opponentSocketId, isPremium } = data;
+        
+        if (!isPremium) {
+            socket.emit('error', { message: 'Premium feature - upgrade to PRO' });
+            return;
+        }
+        
+        console.log(`👑 PRO: ${socket.id} requesting rematch with ${opponentSocketId}`);
+        
+        // Send rematch request to opponent
+        io.to(opponentSocketId).emit('rematch-request', {
+            requesterId: socket.id,
+            requesterName: 'User' // Can add name later
+        });
+        
+        // Also track the rematch pair
+        socket.on('rematch-accepted', () => {
+            console.log(`✅ Rematch accepted: ${socket.id} ↔ ${opponentSocketId}`);
+            
+            // Create new debate between same users
+            const debateId = generateDebateId();
+            const topic = getRandomTopic();
+            const user1Side = getRandomSide();
+            const user2Side = user1Side === 'PRO' ? 'CON' : 'PRO';
+            const firstSpeaker = Math.random() > 0.5 ? socket.id : opponentSocketId;
+            
+            const debate = {
+                id: debateId,
+                user1: socket.id,
+                user2: opponentSocketId,
+                topic: topic,
+                user1Side: user1Side,
+                user2Side: user2Side,
+                currentSpeaker: firstSpeaker,
+                timeStarted: Date.now(),
+                round: 1,
+                spectators: [],
+                votes: {},
+                isRematch: true
+            };
+            
+            activeDebates.set(debateId, debate);
+            
+            userSockets.get(socket.id).currentDebate = debateId;
+            userSockets.get(opponentSocketId).currentDebate = debateId;
+            
+            io.sockets.sockets.get(socket.id)?.join(debateId);
+            io.sockets.sockets.get(opponentSocketId)?.join(debateId);
+            
+            io.to(socket.id).emit('debate-matched', {
+                debateId: debateId,
+                opponentId: opponentSocketId,
+                topic: topic,
+                yourSide: user1Side,
+                firstSpeaker: firstSpeaker,
+                youGoFirst: firstSpeaker === socket.id,
+                round: 1,
+                isRematch: true
+            });
+            
+            io.to(opponentSocketId).emit('debate-matched', {
+                debateId: debateId,
+                opponentId: socket.id,
+                topic: topic,
+                yourSide: user2Side,
+                firstSpeaker: firstSpeaker,
+                youGoFirst: firstSpeaker === opponentSocketId,
+                round: 1,
+                isRematch: true
+            });
+            
+            console.log(`🔄 Rematch started: ${debateId}`);
+        });
+    });
+    
+    // Rematch declined
+    socket.on('rematch-declined', (data) => {
+        const { requesterId } = data;
+        io.to(requesterId).emit('rematch-declined', {
+            message: 'Opponent declined rematch'
+        });
     });
 
     // Disconnect handling
