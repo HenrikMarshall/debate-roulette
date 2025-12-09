@@ -2117,9 +2117,10 @@
             if (isMobile) {
                 return {
                     video: {
-                        width: { ideal: 640 },
-                        height: { ideal: 480 },
-                        facingMode: 'user'
+                        width: { ideal: 640, max: 1280 },
+                        height: { ideal: 480, max: 720 },
+                        facingMode: 'user',
+                        aspectRatio: { ideal: 1.333 }
                     },
                     audio: {
                         echoCancellation: true,
@@ -2140,6 +2141,12 @@
                 }
             };
         };
+        
+        // Fallback constraints if mobile constraints fail
+        const getBasicVideoConstraints = () => ({
+            video: true,
+            audio: true
+        });
 
         // ═══════════════════════════════════════════════════════════
         // MIXPANEL ANALYTICS TRACKING
@@ -2890,7 +2897,13 @@
                 
                 console.log('📹 Requesting camera access...');
 
-                localStream = await navigator.mediaDevices.getUserMedia(getMobileVideoConstraints());
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia(getMobileVideoConstraints());
+                } catch (firstErr) {
+                    console.warn('⚠️ Failed with ideal constraints, trying basic constraints...', firstErr);
+                    // Fallback to basic constraints
+                    localStream = await navigator.mediaDevices.getUserMedia(getBasicVideoConstraints());
+                }
                 
                 console.log('✅ Camera access granted');
 
@@ -2948,14 +2961,26 @@
                 loadingOverlay.classList.remove('active');
                 console.error('Error accessing media devices:', err);
                 
+                // Check if HTTPS issue
+                const isHTTPS = window.location.protocol === 'https:';
+                const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                
+                let errorMsg = '';
+                
                 // Better error messages
                 if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                    alert('Camera/microphone access denied. Please allow access in your browser settings and try again.');
+                    errorMsg = '📷 Camera access denied.\n\nPlease:\n1. Tap the camera icon in your browser address bar\n2. Allow camera and microphone access\n3. Try again';
                 } else if (err.name === 'NotFoundError') {
-                    alert('No camera or microphone found. Please connect a device and try again.');
+                    errorMsg = '📷 No camera or microphone found.\n\nPlease check your device settings.';
+                } else if (err.name === 'NotReadableError') {
+                    errorMsg = '📷 Camera is being used by another app.\n\nPlease close other apps and try again.';
+                } else if (!isHTTPS && !isLocalhost) {
+                    errorMsg = '🔒 Camera requires HTTPS connection.\n\nPlease use a secure connection to access the camera.';
                 } else {
-                    alert('Could not access camera/microphone. Please check your device settings.');
+                    errorMsg = `📷 Camera error: ${err.message}\n\nPlease check your browser settings and try again.`;
                 }
+                
+                alert(errorMsg);
                 findBtn.disabled = false;
             }
         });
@@ -3406,28 +3431,74 @@
             if (recordedChunks.length > 0) {
                 // Detect the actual mime type used
                 const mimeType = recordedChunks[0].type;
-                const isH264 = mimeType.includes('h264');
+                console.log('📥 Download - MIME type:', mimeType);
+                
+                // Determine file extension based on mime type
+                let extension = 'mp4';  // Default to MP4
+                let finalMimeType = mimeType;
+                
+                if (mimeType.includes('mp4') || mimeType.includes('h264')) {
+                    extension = 'mp4';
+                    finalMimeType = 'video/mp4';
+                } else if (mimeType.includes('webm')) {
+                    // Check if we can convert WebM to MP4 for download
+                    // For now, keep as WebM but user can convert later
+                    extension = 'webm';
+                    finalMimeType = 'video/webm';
+                }
                 
                 // Track download
                 const fileSize = recordedChunks.reduce((a,b) => a + b.size, 0);
                 trackEvent('Video Downloaded', {
                     'Rounds': roundsCompleted.textContent,
                     'Duration': debateDuration.textContent,
-                    'Format': isH264 ? 'MP4' : 'WebM',
-                    'File Size (MB)': Math.round(fileSize / 1024 / 1024)
+                    'Format': extension.toUpperCase(),
+                    'MIME Type': mimeType,
+                    'File Size (MB)': Math.round(fileSize / 1024 / 1024),
+                    'Is Mobile': isMobile
                 });
                 
-                const blob = new Blob(recordedChunks, { type: mimeType });
+                const blob = new Blob(recordedChunks, { type: finalMimeType });
                 const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
                 const timestamp = new Date().toISOString().slice(0,10);
+                const filename = `hot-take-debate-${timestamp}.${extension}`;
                 
-                // Use .mp4 extension for H.264, .webm for VP9
-                const extension = isH264 ? 'mp4' : 'webm';
-                link.download = `hot-take-debate-${timestamp}.${extension}`;
-                link.href = url;
-                link.click();
-                URL.revokeObjectURL(url);
+                // Mobile-friendly download
+                if (isMobile) {
+                    // For iOS Safari, open in new window
+                    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            const a = document.createElement('a');
+                            a.href = reader.result;
+                            a.download = filename;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                        };
+                        reader.readAsDataURL(blob);
+                    } else {
+                        // Android Chrome
+                        const link = document.createElement('a');
+                        link.style.display = 'none';
+                        link.download = filename;
+                        link.href = url;
+                        document.body.appendChild(link);
+                        link.click();
+                        setTimeout(() => {
+                            document.body.removeChild(link);
+                            URL.revokeObjectURL(url);
+                        }, 100);
+                    }
+                } else {
+                    // Desktop
+                    const link = document.createElement('a');
+                    link.download = filename;
+                    link.href = url;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                }
                 
                 // Visual feedback
                 downloadDebateModalBtn.textContent = `✓ Downloaded as ${extension.toUpperCase()}!`;
@@ -3449,11 +3520,52 @@
         });
 
         downloadBtn.addEventListener('click', () => {
-            const url = shareVideo.src;
-            const link = document.createElement('a');
-            link.download = `debate-roulette-round-${currentRound}.webm`;
-            link.href = url;
-            link.click();
+            if (recordedChunks.length > 0) {
+                const mimeType = recordedChunks[0].type;
+                let extension = mimeType.includes('mp4') || mimeType.includes('h264') ? 'mp4' : 'webm';
+                
+                const blob = new Blob(recordedChunks, { 
+                    type: extension === 'mp4' ? 'video/mp4' : 'video/webm' 
+                });
+                const url = URL.createObjectURL(blob);
+                const timestamp = new Date().toISOString().slice(0,10);
+                const filename = `hot-take-debate-${timestamp}.${extension}`;
+                
+                // Mobile-friendly download
+                if (isMobile) {
+                    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            const a = document.createElement('a');
+                            a.href = reader.result;
+                            a.download = filename;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                        };
+                        reader.readAsDataURL(blob);
+                    } else {
+                        const link = document.createElement('a');
+                        link.style.display = 'none';
+                        link.download = filename;
+                        link.href = url;
+                        document.body.appendChild(link);
+                        link.click();
+                        setTimeout(() => {
+                            document.body.removeChild(link);
+                            URL.revokeObjectURL(url);
+                        }, 100);
+                    }
+                } else {
+                    const link = document.createElement('a');
+                    link.download = filename;
+                    link.href = url;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                }
+            } else {
+                alert('No recording available.');
+            }
         });
 
         async function startRecording() {
@@ -3879,11 +3991,27 @@
                 
                 recordedChunks = [];
                 
-                // Try H.264 for MP4, fallback to WebM if not supported
-                let mimeType = 'video/webm;codecs=h264';
-                if (!MediaRecorder.isTypeSupported(mimeType)) {
-                    mimeType = 'video/webm;codecs=vp9';
-                    console.log('H.264 not supported, using VP9');
+                // Try different formats in order of preference for MP4 compatibility
+                let mimeType;
+                const formats = [
+                    'video/mp4;codecs=h264,aac',           // Best for MP4
+                    'video/mp4',                            // Safari iOS
+                    'video/webm;codecs=h264,opus',         // Chrome MP4-ish
+                    'video/webm;codecs=vp9,opus',          // Chrome fallback
+                    'video/webm'                            // Final fallback
+                ];
+                
+                for (const format of formats) {
+                    if (MediaRecorder.isTypeSupported(format)) {
+                        mimeType = format;
+                        console.log('✅ Using format:', format);
+                        break;
+                    }
+                }
+                
+                if (!mimeType) {
+                    mimeType = 'video/webm'; // Ultimate fallback
+                    console.warn('⚠️ Using fallback format');
                 }
                 
                 mediaRecorder = new MediaRecorder(combinedStream, {
