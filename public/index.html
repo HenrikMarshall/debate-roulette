@@ -3706,7 +3706,7 @@
         });
 
         // Download Debate functionality (in modal only)
-        downloadDebateModalBtn.addEventListener('click', () => {
+        downloadDebateModalBtn.addEventListener('click', async () => {
             // Download the recorded debate
             if (recordedChunks.length > 0) {
                 // Detect the actual mime type used
