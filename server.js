@@ -42,7 +42,8 @@ app.get('/debate', (req, res) => {
 app.use(express.static('public'));
 
 // State management
-const waitingUsers = new Set();
+const waitingUsers = new Set(); // Non-premium users
+const premiumQueues = new Map(); // Category-specific queues: category -> Set of socket IDs
 const activeDebates = new Map(); // debateId -> { user1, user2, topic, currentSpeaker, timeStarted, spectators: [], votes: {} }
 const userSockets = new Map(); // socketId -> userData
 const spectatorRooms = new Map(); // socketId -> debateId (for tracking which debate spectator is watching)
@@ -148,145 +149,169 @@ function areUsersBlocked(userId1, userId2) {
     return false;
 }
 
-// Debate topics - 100 controversial topics
-const topics = [
-    // Technology & AI (15)
-    "Artificial Intelligence will do more harm than good for humanity",
-    "Social media should be regulated like tobacco products",
-    "Cryptocurrency is the future of money",
-    "Self-driving cars will make roads safer",
-    "Technology makes us more lonely",
-    "Video games cause violence",
-    "The internet was a mistake for society",
-    "Robots will replace most human jobs within 20 years",
-    "Privacy is dead in the digital age and we should accept it",
-    "Smartphones have ruined an entire generation",
-    "Big Tech companies should be broken up",
-    "TikTok should be banned worldwide",
-    "Elon Musk is overrated as a visionary",
-    "The Metaverse is a scam",
-    "NFTs are worthless digital garbage",
+// Debate topics organized by category - 100 controversial topics
+const topicsByCategory = {
+    'Technology & AI': [
+        "Artificial Intelligence will do more harm than good for humanity",
+        "Social media should be regulated like tobacco products",
+        "Cryptocurrency is the future of money",
+        "Self-driving cars will make roads safer",
+        "Technology makes us more lonely",
+        "Video games cause violence",
+        "The internet was a mistake for society",
+        "Robots will replace most human jobs within 20 years",
+        "Privacy is dead in the digital age and we should accept it",
+        "Smartphones have ruined an entire generation",
+        "Big Tech companies should be broken up",
+        "TikTok should be banned worldwide",
+        "Elon Musk is overrated as a visionary",
+        "The Metaverse is a scam",
+        "NFTs are worthless digital garbage"
+    ],
     
-    // Politics & Government (15)
-    "Democracy is the best form of government",
-    "Voting should be mandatory for all citizens",
-    "The voting age should be lowered to 16",
-    "Politicians should have strict term limits",
-    "Billionaires should not exist",
-    "Capitalism is broken beyond repair",
-    "Communism could work if done correctly",
-    "Monarchy is an outdated form of government",
-    "The death penalty should be abolished worldwide",
-    "Gun ownership is a fundamental human right",
-    "All guns should be banned completely",
-    "National borders should be abolished",
-    "Patriotism is just nationalism in disguise",
-    "The United Nations is completely useless",
-    "Lobbying is just legalized corruption",
+    'Politics & Government': [
+        "Democracy is the best form of government",
+        "Voting should be mandatory for all citizens",
+        "The voting age should be lowered to 16",
+        "Politicians should have strict term limits",
+        "Billionaires should not exist",
+        "Capitalism is broken beyond repair",
+        "Communism could work if done correctly",
+        "Monarchy is an outdated form of government",
+        "The death penalty should be abolished worldwide",
+        "Gun ownership is a fundamental human right",
+        "All guns should be banned completely",
+        "National borders should be abolished",
+        "Patriotism is just nationalism in disguise",
+        "The United Nations is completely useless",
+        "Lobbying is just legalized corruption"
+    ],
     
-    // Social Issues (15)
-    "Cancel culture has gone too far",
-    "Political correctness is destroying free speech",
-    "Reparations for slavery should be paid today",
-    "Affirmative action is reverse discrimination",
-    "Men and women are fundamentally different",
-    "Gender is purely a social construct",
-    "There are only two biological genders",
-    "Cultural appropriation is not real",
-    "Beauty pageants should be banned",
-    "Plastic surgery is a form of self-harm",
-    "Being an influencer is not a real job",
-    "Trophy hunting should be illegal worldwide",
-    "Zoos are just animal prisons",
-    "Eating meat is morally wrong",
-    "Veganism is elitist and classist",
+    'Social Issues': [
+        "Cancel culture has gone too far",
+        "Political correctness is destroying free speech",
+        "Reparations for slavery should be paid today",
+        "Affirmative action is reverse discrimination",
+        "Men and women are fundamentally different",
+        "Gender is purely a social construct",
+        "There are only two biological genders",
+        "Cultural appropriation is not real",
+        "Beauty pageants should be banned",
+        "Plastic surgery is a form of self-harm",
+        "Being an influencer is not a real job",
+        "Trophy hunting should be illegal worldwide",
+        "Zoos are just animal prisons",
+        "Eating meat is morally wrong",
+        "Veganism is elitist and classist"
+    ],
     
-    // Education & Work (14)
-    "College education is overrated and overpriced",
-    "All student debt should be forgiven",
-    "Homework should be banned in schools",
-    "Standardized testing is harmful to students",
-    "Everyone should be required to learn coding",
-    "Liberal arts degrees are worthless",
-    "Teachers are overpaid for the work they do",
-    "Remote work is better than office work",
-    "The 4-day work week should be standard",
-    "Unpaid internships should be illegal",
-    "Tipping culture needs to end",
-    "CEOs are paid way too much",
-    "Labor unions have outlived their usefulness",
-    "Child labor laws are too strict",
+    'Education & Work': [
+        "College education is overrated and overpriced",
+        "All student debt should be forgiven",
+        "Homework should be banned in schools",
+        "Standardized testing is harmful to students",
+        "Everyone should be required to learn coding",
+        "Liberal arts degrees are worthless",
+        "Teachers are overpaid for the work they do",
+        "Remote work is better than office work",
+        "The 4-day work week should be standard",
+        "Unpaid internships should be illegal",
+        "Tipping culture needs to end",
+        "CEOs are paid way too much",
+        "Labor unions have outlived their usefulness",
+        "Child labor laws are too strict"
+    ],
     
-    // Economics & Money (10)
-    "Universal Basic Income is necessary for the future",
-    "The rich don't pay their fair share",
-    "Inheritance should be heavily taxed",
-    "Raising minimum wage increases unemployment",
-    "Housing is a fundamental human right",
-    "Landlords are parasites on society",
-    "Credit scores are modern-day discrimination",
-    "The stock market is just legalized gambling",
-    "Money can buy happiness",
-    "Expensive weddings are a waste of money",
+    'Economics & Money': [
+        "Universal Basic Income is necessary for the future",
+        "The rich don't pay their fair share",
+        "Inheritance should be heavily taxed",
+        "Raising minimum wage increases unemployment",
+        "Housing is a fundamental human right",
+        "Landlords are parasites on society",
+        "Credit scores are modern-day discrimination",
+        "The stock market is just legalized gambling",
+        "Money can buy happiness",
+        "Expensive weddings are a waste of money"
+    ],
     
-    // Environment & Science (10)
-    "Climate change is the biggest threat to humanity",
-    "Nuclear energy is essential for fighting climate change",
-    "Space exploration is a waste of resources",
-    "Colonizing Mars is humanity's destiny",
-    "GMO foods are safe and necessary",
-    "Organic food is a marketing scam",
-    "Recycling is mostly pointless theater",
-    "Having children is environmentally irresponsible",
-    "Population control is necessary",
-    "Animal testing is never justified",
+    'Environment & Science': [
+        "Climate change is the biggest threat to humanity",
+        "Nuclear energy is essential for fighting climate change",
+        "Space exploration is a waste of resources",
+        "Colonizing Mars is humanity's destiny",
+        "GMO foods are safe and necessary",
+        "Organic food is a marketing scam",
+        "Recycling is mostly pointless theater",
+        "Having children is environmentally irresponsible",
+        "Population control is necessary",
+        "Animal testing is never justified"
+    ],
     
-    // Health & Medicine (12)
-    "Healthcare is a human right",
-    "Pharmaceutical companies are fundamentally evil",
-    "Alternative medicine is mostly quackery",
-    "Mental illness is overdiagnosed today",
-    "Therapy is overrated and ineffective",
-    "Antidepressants are dangerously overprescribed",
-    "Drug addiction is a choice not a disease",
-    "The war on drugs was a complete failure",
-    "All drugs should be decriminalized",
-    "Cigarettes should be banned completely",
-    "Alcohol is worse for society than marijuana",
-    "Psychedelics should be legal for therapeutic use",
+    'Health & Medicine': [
+        "Healthcare is a human right",
+        "Pharmaceutical companies are fundamentally evil",
+        "Alternative medicine is mostly quackery",
+        "Mental illness is overdiagnosed today",
+        "Therapy is overrated and ineffective",
+        "Antidepressants are dangerously overprescribed",
+        "Drug addiction is a choice not a disease",
+        "The war on drugs was a complete failure",
+        "All drugs should be decriminalized",
+        "Cigarettes should be banned completely",
+        "Alcohol is worse for society than marijuana",
+        "Psychedelics should be legal for therapeutic use"
+    ],
     
-    // Family & Relationships (10)
-    "Marriage is an outdated institution",
-    "Monogamy is unnatural for humans",
-    "Divorce is too easy nowadays",
-    "Parents should be licensed before having kids",
-    "Spanking children is child abuse",
-    "Homeschooling should be illegal",
-    "Having kids in today's world is selfish",
-    "Adoption is better than biological children",
-    "Large age gaps in relationships are predatory",
-    "Prenuptial agreements show lack of trust",
+    'Family & Relationships': [
+        "Marriage is an outdated institution",
+        "Monogamy is unnatural for humans",
+        "Divorce is too easy nowadays",
+        "Parents should be licensed before having kids",
+        "Spanking children is child abuse",
+        "Homeschooling should be illegal",
+        "Having kids in today's world is selfish",
+        "Adoption is better than biological children",
+        "Large age gaps in relationships are predatory",
+        "Prenuptial agreements show lack of trust"
+    ],
     
-    // Media & Entertainment (9)
-    "Books are better than movies and TV",
-    "Modern art is pretentious garbage",
-    "Rap music is degrading to society",
-    "Reality TV is rotting people's brains",
-    "Streaming services are killing cinema",
-    "Piracy is justified when content is overpriced",
-    "Professional athletes are overpaid",
-    "Celebrities should stay out of politics",
-    "Paparazzi photography should be illegal"
-];
+    'Media & Entertainment': [
+        "Books are better than movies and TV",
+        "Modern art is pretentious garbage",
+        "Rap music is degrading to society",
+        "Reality TV is rotting people's brains",
+        "Streaming services are killing cinema",
+        "Piracy is justified when content is overpriced",
+        "Professional athletes are overpaid",
+        "Celebrities should stay out of politics",
+        "Paparazzi photography should be illegal"
+    ]
+};
+
+// Flatten all topics for random selection (non-premium users)
+const topics = Object.values(topicsByCategory).flat();
+
+// Get available categories
+const categories = Object.keys(topicsByCategory);
 
 // Generate random debate ID
 function generateDebateId() {
     return `debate_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// Get random topic
+// Get random topic (for non-premium users)
 function getRandomTopic() {
     return topics[Math.floor(Math.random() * topics.length)];
+}
+
+// Get random topic from specific category (for premium users)
+function getCategoryTopic(category) {
+    const categoryTopics = topicsByCategory[category];
+    if (!categoryTopics || categoryTopics.length === 0) {
+        return getRandomTopic(); // Fallback to random
+    }
+    return categoryTopics[Math.floor(Math.random() * categoryTopics.length)];
 }
 
 // Get topic by category (PRO feature)
@@ -474,6 +499,171 @@ io.on('connection', (socket) => {
             socket.emit('searching', { message: 'Searching for opponent...' });
         }
     });
+
+    // ═══════════════════════════════════════════════════════════
+    // PREMIUM: CATEGORY-BASED MATCHMAKING
+    // ═══════════════════════════════════════════════════════════
+    socket.on('find-opponent-premium', (data) => {
+        const { category, isPremium } = data;
+        console.log(`${socket.id} looking for opponent - Category: ${category}, Premium: ${isPremium}`);
+
+        // Check if user is banned
+        if (isUserBanned(socket.id)) {
+            const banInfo = bannedUsers.get(socket.id);
+            const timeLeft = Math.ceil((banInfo.bannedUntil - Date.now()) / (1000 * 60));
+            socket.emit('banned', {
+                reason: 'Multiple reports received',
+                bannedUntil: new Date(banInfo.bannedUntil).toISOString(),
+                reportCount: banInfo.reportCount,
+                timeLeftMinutes: timeLeft
+            });
+            return;
+        }
+
+        // Check if already in any queue
+        if (waitingUsers.has(socket.id)) {
+            socket.emit('error', { message: 'Already in queue' });
+            return;
+        }
+        for (const queue of premiumQueues.values()) {
+            if (queue.has(socket.id)) {
+                socket.emit('error', { message: 'Already in queue' });
+                return;
+            }
+        }
+
+        // Check if already in debate
+        const userData = userSockets.get(socket.id);
+        if (userData.currentDebate) {
+            socket.emit('error', { message: 'Already in a debate' });
+            return;
+        }
+
+        // Premium user with valid category
+        if (isPremium && category && topicsByCategory[category]) {
+            console.log(`👑 Premium: ${socket.id} → ${category} queue`);
+            
+            if (!premiumQueues.has(category)) {
+                premiumQueues.set(category, new Set());
+            }
+            const categoryQueue = premiumQueues.get(category);
+            categoryQueue.add(socket.id);
+
+            // Try premium-to-premium match first
+            if (categoryQueue.size >= 2) {
+                const usersArray = Array.from(categoryQueue);
+                const user1Id = usersArray[0];
+                const user2Id = usersArray[1];
+
+                if (areUsersBlocked(user1Id, user2Id)) {
+                    console.log(`🚫 Blocked: ${user1Id} ↔ ${user2Id}`);
+                    return;
+                }
+
+                categoryQueue.delete(user1Id);
+                categoryQueue.delete(user2Id);
+
+                createDebateWithCategory(user1Id, user2Id, category, true);
+            }
+            // Try premium-to-nonpremium match
+            else if (waitingUsers.size > 0) {
+                const nonPremiumId = Array.from(waitingUsers)[0];
+
+                if (areUsersBlocked(socket.id, nonPremiumId)) {
+                    socket.emit('searching', { message: `Searching ${category}...` });
+                    return;
+                }
+
+                categoryQueue.delete(socket.id);
+                waitingUsers.delete(nonPremiumId);
+
+                createDebateWithCategory(socket.id, nonPremiumId, category, false);
+            } else {
+                socket.emit('searching', { message: `Searching ${category}...` });
+            }
+        } 
+        // Non-premium: regular queue
+        else {
+            waitingUsers.add(socket.id);
+
+            if (waitingUsers.size >= 2) {
+                const usersArray = Array.from(waitingUsers);
+                const user1Id = usersArray[0];
+                const user2Id = usersArray[1];
+
+                if (areUsersBlocked(user1Id, user2Id)) {
+                    return;
+                }
+
+                waitingUsers.delete(user1Id);
+                waitingUsers.delete(user2Id);
+
+                createDebateWithCategory(user1Id, user2Id, null, false);
+            } else {
+                socket.emit('searching', { message: 'Searching...' });
+            }
+        }
+    });
+
+    // Helper function to create debates
+    function createDebateWithCategory(user1Id, user2Id, category, isPremiumDebate) {
+        const debateId = generateDebateId();
+        const topic = category ? getCategoryTopic(category) : getRandomTopic();
+        const user1Side = getRandomSide();
+        const user2Side = user1Side === 'PRO' ? 'CON' : 'PRO';
+        const firstSpeaker = Math.random() > 0.5 ? user1Id : user2Id;
+
+        const debate = {
+            id: debateId,
+            user1: user1Id,
+            user2: user2Id,
+            topic: topic,
+            category: category || 'Random',
+            user1Side: user1Side,
+            user2Side: user2Side,
+            firstSpeaker: firstSpeaker,
+            currentSpeaker: firstSpeaker,
+            round: 1,
+            timeStarted: Date.now(),
+            spectators: [],
+            votes: { user1: 0, user2: 0 },
+            isPremiumDebate: isPremiumDebate
+        };
+
+        activeDebates.set(debateId, debate);
+        userSockets.get(user1Id).currentDebate = debateId;
+        userSockets.get(user2Id).currentDebate = debateId;
+
+        io.sockets.sockets.get(user1Id)?.join(debateId);
+        io.sockets.sockets.get(user2Id)?.join(debateId);
+
+        io.to(user1Id).emit('debate-matched', {
+            debateId: debateId,
+            opponentId: user2Id,
+            topic: topic,
+            category: category || 'Random',
+            yourSide: user1Side,
+            firstSpeaker: firstSpeaker,
+            youGoFirst: firstSpeaker === user1Id,
+            round: 1,
+            isPremiumDebate: isPremiumDebate
+        });
+
+        io.to(user2Id).emit('debate-matched', {
+            debateId: debateId,
+            opponentId: user1Id,
+            topic: topic,
+            category: category || 'Random',
+            yourSide: user2Side,
+            firstSpeaker: firstSpeaker,
+            youGoFirst: firstSpeaker === user2Id,
+            round: 1,
+            isPremiumDebate: isPremiumDebate
+        });
+
+        const emoji = isPremiumDebate ? '👑👑' : category ? '👑' : '';
+        console.log(`${emoji} Debate: ${debateId} - ${category || 'Random'} - ${user1Id} vs ${user2Id}`);
+    }
 
     // WebRTC signaling
     socket.on('webrtc-offer', ({ debateId, offer }) => {
@@ -709,6 +899,16 @@ io.on('connection', (socket) => {
             });
         });
         socket.emit('active-debates-list', debates);
+    });
+
+    // Get available debate categories (for premium users)
+    socket.on('get-categories', () => {
+        socket.emit('categories-list', {
+            categories: categories,
+            topicCounts: Object.fromEntries(
+                Object.entries(topicsByCategory).map(([cat, topics]) => [cat, topics.length])
+            )
+        });
     });
 
     // Spectator Mode - Join debate as spectator
@@ -1151,6 +1351,14 @@ io.on('connection', (socket) => {
 
         // Remove from waiting queue
         waitingUsers.delete(socket.id);
+
+        // Remove from all premium category queues
+        for (const [category, queue] of premiumQueues.entries()) {
+            queue.delete(socket.id);
+            if (queue.size === 0) {
+                premiumQueues.delete(category); // Clean up empty queues
+            }
+        }
 
         // Remove from spectator rooms
         const spectatingDebateId = spectatorRooms.get(socket.id);

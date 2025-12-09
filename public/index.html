@@ -1779,7 +1779,7 @@
         </div>
 
         <!-- Recording Indicator -->
-        <div class="recording-indicator" id="recordingIndicator">
+        <div class="recording-indicator" id="recordingIndicator" style="display: none;">
             <div class="recording-dot"></div>
             <span id="recordingTime">REC 30s</span>
         </div>
@@ -2005,49 +2005,76 @@
             </div>
         </div>
 
-        <!-- Topic Selection Modal (PRO Only) -->
+        <!-- Category Selection Modal (Premium Feature) -->
         <div class="topic-select-modal" id="topicSelectModal">
             <div class="topic-select-card">
-                <h2 style="font-family: 'Syne', sans-serif; margin-bottom: 20px;">
-                    🎯 Choose Your Topic
+                <h2 style="font-family: 'Syne', sans-serif; margin-bottom: 10px; background: linear-gradient(135deg, #ff3366, #6366ff, #00ff88); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                    👑 Choose Your Topic Category
                 </h2>
+                <p style="color: var(--text-dim); margin-bottom: 25px; font-size: 0.9rem;">
+                    Premium Feature - Select a debate category
+                </p>
 
-                <div class="topic-categories">
-                    <div class="topic-category" data-category="politics">
-                        <div class="category-icon">🏛️</div>
-                        <div class="category-name">Politics</div>
-                        <div class="category-count">25 topics</div>
-                    </div>
-
-                    <div class="topic-category" data-category="technology">
-                        <div class="category-icon">💻</div>
-                        <div class="category-name">Technology</div>
-                        <div class="category-count">20 topics</div>
-                    </div>
-
-                    <div class="topic-category" data-category="social">
-                        <div class="category-icon">👥</div>
-                        <div class="category-name">Social Issues</div>
-                        <div class="category-count">18 topics</div>
-                    </div>
-
-                    <div class="topic-category" data-category="culture">
-                        <div class="category-icon">🎭</div>
-                        <div class="category-name">Pop Culture</div>
+                <div class="topic-categories" id="categoryGrid">
+                    <div class="topic-category" data-category="Technology & AI">
+                        <div class="category-icon">🤖</div>
+                        <div class="category-name">Technology & AI</div>
                         <div class="category-count">15 topics</div>
                     </div>
 
-                    <div class="topic-category" data-category="economics">
-                        <div class="category-icon">💰</div>
-                        <div class="category-name">Economics</div>
-                        <div class="category-count">12 topics</div>
+                    <div class="topic-category" data-category="Politics & Government">
+                        <div class="category-icon">🏛️</div>
+                        <div class="category-name">Politics</div>
+                        <div class="category-count">15 topics</div>
                     </div>
 
-                    <div class="topic-category" data-category="environment">
+                    <div class="topic-category" data-category="Social Issues">
+                        <div class="category-icon">💬</div>
+                        <div class="category-name">Social Issues</div>
+                        <div class="category-count">15 topics</div>
+                    </div>
+
+                    <div class="topic-category" data-category="Education & Work">
+                        <div class="category-icon">📚</div>
+                        <div class="category-name">Education & Work</div>
+                        <div class="category-count">14 topics</div>
+                    </div>
+
+                    <div class="topic-category" data-category="Economics & Money">
+                        <div class="category-icon">💰</div>
+                        <div class="category-name">Economics</div>
+                        <div class="category-count">10 topics</div>
+                    </div>
+
+                    <div class="topic-category" data-category="Environment & Science">
                         <div class="category-icon">🌍</div>
                         <div class="category-name">Environment</div>
                         <div class="category-count">10 topics</div>
                     </div>
+
+                    <div class="topic-category" data-category="Health & Medicine">
+                        <div class="category-icon">⚕️</div>
+                        <div class="category-name">Health</div>
+                        <div class="category-count">12 topics</div>
+                    </div>
+
+                    <div class="topic-category" data-category="Family & Relationships">
+                        <div class="category-icon">👨‍👩‍👧</div>
+                        <div class="category-name">Family</div>
+                        <div class="category-count">10 topics</div>
+                    </div>
+
+                    <div class="topic-category" data-category="Media & Entertainment">
+                        <div class="category-icon">🎬</div>
+                        <div class="category-name">Entertainment</div>
+                        <div class="category-count">9 topics</div>
+                    </div>
+                </div>
+
+                <div class="topic-category" data-category="Random" style="margin-top: 15px; background: linear-gradient(135deg, #ff3366, #6366ff); border: 2px solid var(--accent);">
+                    <div class="category-icon">🎲</div>
+                    <div class="category-name">Random (All Topics)</div>
+                    <div class="category-count">100 topics</div>
                 </div>
 
                 <button class="debate-end-btn secondary" id="closeTopicSelectBtn" style="margin-top: 20px;">
@@ -3021,9 +3048,21 @@
             trackEvent('Find Opponent Clicked', {
                 'Has Debated Before': localStorage.getItem('hasDebated') === 'true',
                 'Total Debates Completed': debatesCompletedCount,
-                'Is Logged In': !!currentUser
+                'Is Logged In': !!currentUser,
+                'Is Premium': isPremiumUser
             });
             
+            // ✨ PREMIUM: Show category selection modal
+            if (isPremiumUser) {
+                console.log('👑 Premium user - showing category selection');
+                topicSelectModal.classList.add('active');
+                trackEvent('Category Modal Opened', {
+                    'From': 'Find Opponent Button'
+                });
+                return; // Stop here, category selection will handle matchmaking
+            }
+            
+            // NON-PREMIUM: Continue with regular matchmaking
             try {
                 // Show loading overlay
                 loadingText.textContent = 'Getting camera ready...';
@@ -4530,13 +4569,13 @@
                 mediaRecorder.start(1000);  // Record in 1-second chunks
                 drawFrame();
                 
-                // Show recording indicator
-                if (recordingIndicator) {
-                    recordingIndicator.style.display = 'flex';
-                    recordingTime.textContent = 'REC';
-                }
+                // Recording indicator hidden - silent recording
+                // if (recordingIndicator) {
+                //     recordingIndicator.style.display = 'flex';
+                //     recordingTime.textContent = 'REC';
+                // }
                 
-                console.log('Debate recording started successfully');
+                console.log('Debate recording started successfully (silent mode)');
 
             } catch (err) {
                 console.error('Error starting recording:', err);
@@ -4740,23 +4779,97 @@
         
         // Topic category selection
         document.querySelectorAll('.topic-category').forEach(category => {
-            category.addEventListener('click', () => {
+            category.addEventListener('click', async () => {
                 selectedCategory = category.getAttribute('data-category');
                 
-                trackEvent('Topic Category Selected', {
-                    'Category': selectedCategory
-                });
-                
-                // Send to backend to match with this category
-                socket.emit('find-opponent-with-category', {
-                    category: selectedCategory,
-                    isPremium: true
+                trackEvent('Category Selected', {
+                    'Category': selectedCategory,
+                    'Is Premium': isPremiumUser
                 });
                 
                 topicSelectModal.classList.remove('active');
-                loadingOverlay.classList.add('active');
-                loadingText.textContent = 'Finding opponent...';
-                loadingSubtext.textContent = `Category: ${selectedCategory}`;
+                
+                // Start camera setup and matchmaking
+                try {
+                    // Show loading overlay
+                    loadingText.textContent = 'Getting camera ready...';
+                    loadingSubtext.textContent = 'Requesting camera access';
+                    loadingOverlay.classList.add('active');
+                    
+                    console.log('📹 Requesting camera access for premium matchmaking...');
+
+                    // Progressive fallback with timeout for mobile
+                    const getCameraWithTimeout = async (constraints, timeoutMs = 8000) => {
+                        return Promise.race([
+                            navigator.mediaDevices.getUserMedia(constraints),
+                            new Promise((_, reject) => 
+                                setTimeout(() => reject(new Error('Camera timeout')), timeoutMs)
+                            )
+                        ]);
+                    };
+
+                    // Try best quality first (desktop)
+                    let stream;
+                    try {
+                        stream = await getCameraWithTimeout({
+                            video: {
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 },
+                                facingMode: 'user'
+                            },
+                            audio: {
+                                echoCancellation: true,
+                                noiseSuppression: true,
+                                autoGainControl: true
+                            }
+                        });
+                        console.log('✅ High quality camera access granted');
+                    } catch (err1) {
+                        console.log('⚠️ High quality failed, trying medium...');
+                        try {
+                            stream = await getCameraWithTimeout({
+                                video: {
+                                    width: { ideal: 640 },
+                                    height: { ideal: 480 },
+                                    facingMode: 'user'
+                                },
+                                audio: true
+                            });
+                            console.log('✅ Medium quality camera access granted');
+                        } catch (err2) {
+                            console.log('⚠️ Medium quality failed, trying basic...');
+                            stream = await getCameraWithTimeout({
+                                video: true,
+                                audio: true
+                            });
+                            console.log('✅ Basic camera access granted');
+                        }
+                    }
+
+                    // Set local stream
+                    localStream = stream;
+                    localVideo.srcObject = stream;
+
+                    // Enable find button
+                    findBtn.disabled = false;
+
+                    // Send to backend using premium matchmaking
+                    socket.emit('find-opponent-premium', {
+                        category: selectedCategory === 'Random' ? null : selectedCategory,
+                        isPremium: isPremiumUser
+                    });
+                    
+                    loadingText.textContent = selectedCategory === 'Random' ? 'Finding opponent...' : `Finding ${selectedCategory} opponent...`;
+                    loadingSubtext.textContent = selectedCategory === 'Random' ? 'Matching with anyone available' : `Looking for someone interested in ${selectedCategory}`;
+                    
+                    console.log(`👑 Premium matchmaking: Category = ${selectedCategory}, Premium = ${isPremiumUser}`);
+                    
+                } catch (err) {
+                    console.error('❌ Camera access error:', err);
+                    loadingOverlay.classList.remove('active');
+                    alert('Camera access is required to start a debate. Please allow camera access and try again.');
+                    findBtn.disabled = false;
+                }
             });
         });
         
