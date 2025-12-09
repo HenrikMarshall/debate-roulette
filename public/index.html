@@ -331,6 +331,9 @@
             justify-content: center;
             z-index: 3000;
             backdrop-filter: blur(10px);
+            padding: 20px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .debate-end-modal.active {
@@ -346,6 +349,9 @@
             width: 90%;
             text-align: center;
             animation: slideUp 0.3s ease-out;
+            max-height: 90vh;
+            overflow-y: auto;
+            margin: auto;
         }
 
         @keyframes slideUp {
@@ -530,6 +536,10 @@
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
             white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
         }
 
         .upgrade-btn:hover {
@@ -1218,6 +1228,68 @@
             .topic-categories {
                 grid-template-columns: 1fr;
                 gap: 12px;
+            }
+
+            /* Debate End Modal - Mobile */
+            .debate-end-modal {
+                padding: 10px;
+                align-items: flex-start;
+            }
+
+            .debate-end-card {
+                padding: 25px 20px;
+                width: 95%;
+                max-height: 85vh;
+                margin: 10px auto;
+            }
+
+            .debate-end-title {
+                font-size: 1.8rem;
+                margin-bottom: 15px;
+            }
+
+            .debate-stats {
+                gap: 10px;
+                margin: 20px 0;
+            }
+
+            .stat-box {
+                padding: 15px 10px;
+            }
+
+            .stat-value {
+                font-size: 2rem;
+            }
+
+            .stat-label {
+                font-size: 0.8rem;
+            }
+
+            .social-share {
+                margin-bottom: 20px !important;
+            }
+
+            .social-share p {
+                font-size: 0.85rem !important;
+            }
+
+            .social-buttons {
+                gap: 10px !important;
+            }
+
+            .social-btn {
+                font-size: 0.85rem !important;
+                padding: 12px 15px !important;
+                min-height: 48px;
+            }
+
+            .debate-end-buttons {
+                gap: 10px;
+            }
+
+            .debate-end-btn {
+                padding: 14px 20px;
+                font-size: 0.9rem;
             }
         }
 
