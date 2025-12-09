@@ -491,9 +491,6 @@
         
         /* Premium Badge */
         .premium-badge {
-            position: absolute;
-            top: 20px;
-            left: 20px;
             background: linear-gradient(135deg, #FFD700, #FFA500);
             color: #0a0a0f;
             padding: 8px 20px;
@@ -508,7 +505,6 @@
             gap: 6px;
             box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
             animation: shimmer 2s infinite;
-            z-index: 100;
         }
 
         .crown-icon {
@@ -522,9 +518,6 @@
 
         /* Upgrade Button */
         .upgrade-btn {
-            position: absolute;
-            top: 20px;
-            left: 20px;
             background: linear-gradient(135deg, #FFD700, #FFA500);
             color: #0a0a0f;
             padding: 10px 24px;
@@ -536,7 +529,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
-            z-index: 100;
+            white-space: nowrap;
         }
 
         .upgrade-btn:hover {
@@ -571,6 +564,8 @@
             width: 100%;
             border: 2px solid rgba(255, 215, 0, 0.3);
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         .premium-header {
@@ -1144,6 +1139,83 @@
             .floating-emoji {
                 font-size: 2.5rem;
             }
+
+            /* Premium Button - Mobile */
+            .upgrade-btn,
+            .premium-badge {
+                position: static;
+                margin: 15px auto;
+                display: block;
+                width: fit-content;
+            }
+
+            /* Premium Modal - Mobile */
+            .premium-modal {
+                padding: 15px;
+                align-items: flex-start;
+                overflow-y: auto;
+            }
+
+            .premium-card {
+                padding: 25px 20px;
+                max-height: none;
+                margin: 20px 0;
+            }
+
+            .premium-title {
+                font-size: 2rem;
+            }
+
+            .premium-subtitle {
+                font-size: 0.95rem;
+            }
+
+            .price-amount {
+                font-size: 2.5rem;
+            }
+
+            .premium-features {
+                margin: 20px 0;
+            }
+
+            .premium-feature {
+                padding: 12px;
+                margin-bottom: 10px;
+            }
+
+            .feature-icon {
+                font-size: 1.3rem;
+                min-width: 25px;
+            }
+
+            .feature-content h4 {
+                font-size: 1rem;
+            }
+
+            .feature-content p {
+                font-size: 0.85rem;
+            }
+
+            .premium-cta {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .premium-cta button {
+                width: 100%;
+                padding: 16px;
+                font-size: 1rem;
+            }
+
+            /* Topic Selection - Mobile */
+            .topic-select-card {
+                padding: 20px;
+            }
+
+            .topic-categories {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
         }
 
         /* Share Clip Modal */
@@ -1525,12 +1597,20 @@
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 15px; flex-wrap: wrap;">
-            <a href="/profile" id="profileLink" style="color: var(--text); text-decoration: none; font-size: 0.95rem; padding: 10px 20px; border: 2px solid rgba(255,255,255,0.2); border-radius: 10px; transition: all 0.3s ease; font-family: 'Space Mono', monospace; display: flex; align-items: center; gap: 10px;" 
-               onmouseover="this.style.background='rgba(255,255,255,0.1)'" 
-               onmouseout="this.style.background='transparent'">
-                <span id="userInitial" style="width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: var(--bg); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem;">?</span>
-                <span id="userName">Profile</span>
-            </a>
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <button class="premium-badge" id="premiumBadge" style="display: none; position: static; margin: 0;">
+                    <span class="crown-icon">👑</span> PRO
+                </button>
+                <button class="upgrade-btn" id="upgradeBtn" style="position: static; margin: 0;">
+                    ✨ Upgrade to PRO
+                </button>
+                <a href="/profile" id="profileLink" style="color: var(--text); text-decoration: none; font-size: 0.95rem; padding: 10px 20px; border: 2px solid rgba(255,255,255,0.2); border-radius: 10px; transition: all 0.3s ease; font-family: 'Space Mono', monospace; display: flex; align-items: center; gap: 10px;" 
+                   onmouseover="this.style.background='rgba(255,255,255,0.1)'" 
+                   onmouseout="this.style.background='transparent'">
+                    <span id="userInitial" style="width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: var(--bg); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem;">?</span>
+                    <span id="userName">Profile</span>
+                </a>
+            </div>
             <a href="/spectator.html" style="color: var(--accent); text-decoration: none; font-size: 0.95rem; padding: 10px 20px; border: 2px solid var(--accent); border-radius: 10px; transition: all 0.3s ease; font-family: 'Space Mono', monospace;" 
                onmouseover="this.style.background='var(--accent)'; this.style.color='var(--bg)'" 
                onmouseout="this.style.background='transparent'; this.style.color='var(--accent)'">
@@ -1556,12 +1636,6 @@
         <header>
             <h1><a href="/" style="color: inherit; text-decoration: none; cursor: pointer;">HOT TAKE</a></h1>
             <p class="subtitle">Random Video Debates • 30 Seconds Each Side</p>
-            <button class="premium-badge" id="premiumBadge" style="display: none;">
-                <span class="crown-icon">👑</span> PRO
-            </button>
-            <button class="upgrade-btn" id="upgradeBtn">
-                ✨ Upgrade to PRO
-            </button>
         </header>
 
         <div class="connection-status" id="connectionStatus">
