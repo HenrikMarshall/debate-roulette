@@ -2240,12 +2240,16 @@
             }, 100);
         });
 
-        // WebRTC Configuration
+        // WebRTC Configuration with low-latency optimizations
         const rtcConfig = {
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
-            ]
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' }
+            ],
+            iceTransportPolicy: 'all',
+            bundlePolicy: 'max-bundle',
+            rtcpMuxPolicy: 'require'
         };
 
         // Check authentication
@@ -2713,10 +2717,35 @@
         async function initWebRTC(youGoFirst) {
             peerConnection = new RTCPeerConnection(rtcConfig);
 
-            // Add local stream tracks with explicit audio/video
+            // Add local stream tracks with low-latency settings
             localStream.getTracks().forEach(track => {
                 console.log('Adding track:', track.kind, track.enabled);
-                peerConnection.addTrack(track, localStream);
+                const sender = peerConnection.addTrack(track, localStream);
+                
+                // Set low-latency parameters for video
+                if (track.kind === 'video' && sender.setParameters) {
+                    const params = sender.getParameters();
+                    if (!params.encodings) {
+                        params.encodings = [{}];
+                    }
+                    params.encodings[0].maxBitrate = 1500000; // 1.5 Mbps
+                    params.encodings[0].priority = 'high';
+                    sender.setParameters(params).catch(err => 
+                        console.warn('Could not set video parameters:', err)
+                    );
+                }
+                
+                // Set low-latency parameters for audio
+                if (track.kind === 'audio' && sender.setParameters) {
+                    const params = sender.getParameters();
+                    if (!params.encodings) {
+                        params.encodings = [{}];
+                    }
+                    params.encodings[0].priority = 'high';
+                    sender.setParameters(params).catch(err => 
+                        console.warn('Could not set audio parameters:', err)
+                    );
+                }
             });
 
             // Handle incoming tracks
@@ -4377,26 +4406,39 @@
                 
                 mediaRecorder = new MediaRecorder(combinedStream, {
                     mimeType: mimeType,
-                    videoBitsPerSecond: 2500000,
-                    audioBitsPerSecond: 128000  // Add audio bitrate
+                    videoBitsPerSecond: isMobile ? 1500000 : 2500000,  // Lower bitrate for mobile
+                    audioBitsPerSecond: 128000
                 });
 
                 mediaRecorder.ondataavailable = (event) => {
                     if (event.data.size > 0) {
                         recordedChunks.push(event.data);
+                        console.log('📦 Chunk added. Total chunks:', recordedChunks.length, 'Size:', event.data.size);
                     }
                 };
 
                 mediaRecorder.onstop = () => {
                     console.log('Recording stopped. Chunks collected:', recordedChunks.length);
                     
+                    // Verify recording has data
+                    const totalSize = recordedChunks.reduce((sum, chunk) => sum + chunk.size, 0);
+                    console.log('Total recording size:', totalSize, 'bytes');
+                    
+                    if (recordedChunks.length === 0 || totalSize === 0) {
+                        console.error('❌ Recording has no data!');
+                    }
+                    
                     // Hide recording indicator
                     if (recordingIndicator) {
                         recordingIndicator.style.display = 'none';
                     }
                 };
+                
+                mediaRecorder.onerror = (event) => {
+                    console.error('❌ MediaRecorder error:', event.error);
+                };
 
-                mediaRecorder.start();
+                mediaRecorder.start(1000);  // Record in 1-second chunks
                 drawFrame();
                 
                 // Show recording indicator
@@ -4409,7 +4451,15 @@
 
             } catch (err) {
                 console.error('Error starting recording:', err);
-                // Don't alert user - recording is optional
+                console.error('Recording error details:', {
+                    name: err.name,
+                    message: err.message,
+                    localStream: !!localStream,
+                    remoteStream: !!remoteVideo.srcObject,
+                    isMobile: isMobile
+                });
+                // Show error to user
+                alert(`⚠️ Recording failed: ${err.message}\n\nDebate will continue but won't be recorded.`);
             }
         }
 
