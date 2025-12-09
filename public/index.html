@@ -2416,11 +2416,14 @@
                     // Hide loading overlay
                     loadingOverlay.classList.remove('active');
                     
-                    // Start recording the entire debate automatically
-                    startRecording();
-
-                    // Initialize WebRTC after countdown
+                    // Initialize WebRTC first
                     await initWebRTC(data.youGoFirst);
+                    
+                    // Wait a bit for remote stream to be fully established
+                    setTimeout(() => {
+                        // Start recording the entire debate automatically
+                        startRecording();
+                    }, 1000);  // 1 second delay to ensure remote audio is connected
                 });
 
                 socket.on('emoji-received', ({ emoji, from }) => {
@@ -3618,25 +3621,53 @@
                 // Create a MediaStream from canvas
                 const canvasStream = canvas.captureStream(30); // 30 FPS
                 
-                // Mix audio from both local and remote streams
-                const audioContext = new AudioContext();
+                // Mix audio from both local and remote streams with gain control
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Resume audio context if suspended (mobile requirement)
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                    console.log('📢 Audio context resumed');
+                }
+                
                 const destination = audioContext.createMediaStreamDestination();
                 
-                if (localStream) {
+                // Add local audio with gain
+                if (localStream && localStream.getAudioTracks().length > 0) {
                     const localAudio = audioContext.createMediaStreamSource(localStream);
-                    localAudio.connect(destination);
+                    const localGain = audioContext.createGain();
+                    localGain.gain.value = 1.0; // Full volume
+                    localAudio.connect(localGain);
+                    localGain.connect(destination);
+                    console.log('✅ Local audio connected:', localStream.getAudioTracks().length, 'tracks');
+                } else {
+                    console.warn('⚠️ No local audio tracks available');
                 }
                 
-                if (remoteVideo.srcObject) {
+                // Add remote audio with gain
+                if (remoteVideo.srcObject && remoteVideo.srcObject.getAudioTracks().length > 0) {
                     const remoteAudio = audioContext.createMediaStreamSource(remoteVideo.srcObject);
-                    remoteAudio.connect(destination);
+                    const remoteGain = audioContext.createGain();
+                    remoteGain.gain.value = 1.0; // Full volume
+                    remoteAudio.connect(remoteGain);
+                    remoteGain.connect(destination);
+                    console.log('✅ Remote audio connected:', remoteVideo.srcObject.getAudioTracks().length, 'tracks');
+                } else {
+                    console.warn('⚠️ No remote audio tracks available');
                 }
+                
+                console.log('🎵 Audio mixing complete. Combined tracks:', destination.stream.getAudioTracks().length);
                 
                 // Combine video from canvas and mixed audio
                 const combinedStream = new MediaStream([
                     ...canvasStream.getVideoTracks(),
                     ...destination.stream.getAudioTracks()
                 ]);
+                
+                console.log('📹 Combined stream tracks:', {
+                    video: combinedStream.getVideoTracks().length,
+                    audio: combinedStream.getAudioTracks().length
+                });
                 
                 // Helper to draw rounded rectangle
                 const roundRect = (x, y, width, height, radius) => {
@@ -4040,9 +4071,25 @@
                     console.warn('⚠️ Using fallback format');
                 }
                 
+                // Verify we have audio before recording
+                const audioTracks = combinedStream.getAudioTracks();
+                const videoTracks = combinedStream.getVideoTracks();
+                console.log('🎬 Starting MediaRecorder with:', {
+                    mimeType,
+                    audioTracks: audioTracks.length,
+                    videoTracks: videoTracks.length,
+                    audioEnabled: audioTracks[0]?.enabled,
+                    audioReadyState: audioTracks[0]?.readyState
+                });
+                
+                if (audioTracks.length === 0) {
+                    console.error('❌ NO AUDIO TRACKS IN COMBINED STREAM!');
+                }
+                
                 mediaRecorder = new MediaRecorder(combinedStream, {
                     mimeType: mimeType,
-                    videoBitsPerSecond: 2500000
+                    videoBitsPerSecond: 2500000,
+                    audioBitsPerSecond: 128000  // Add audio bitrate
                 });
 
                 mediaRecorder.ondataavailable = (event) => {
