@@ -1867,6 +1867,9 @@
                 </div>
 
                 <div class="debate-end-buttons">
+                    <button class="debate-end-btn premium" id="rematchBtn" style="background: linear-gradient(135deg, #ffd700, #ffed4e); color: #0a0a0f; font-weight: 700; display: none;">
+                        🔄 Rematch Same Opponent
+                    </button>
                     <button class="debate-end-btn primary" id="debateAgainBtn">
                         🎤 Debate Again
                     </button>
@@ -3359,6 +3362,15 @@
             roundsCompleted.textContent = currentRound;
             debateDuration.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
             totalSpectators.textContent = spectatorCount;
+            
+            // Show rematch button if opponent is available
+            const rematchBtn = document.getElementById('rematchBtn');
+            if (lastOpponentForRematch) {
+                rematchBtn.style.display = 'block';
+            } else {
+                rematchBtn.style.display = 'none';
+            }
+            
             debateEndModal.classList.add('active');
             
             // Close peer connection
@@ -3407,6 +3419,12 @@
         }
 
         // Debate end modal button handlers
+        const rematchBtn = document.getElementById('rematchBtn');
+        
+        rematchBtn.addEventListener('click', () => {
+            requestRematch();
+        });
+        
         debateAgainBtn.addEventListener('click', () => {
             trackEvent('Debate Again Clicked', {
                 'Previous Rounds': roundsCompleted.textContent,
@@ -3715,7 +3733,37 @@
                 if (isMobile) {
                     // For mobile, we'll show the video in a way users can save to camera roll
                     if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-                        // iOS: Show video with instructions to save
+                        // iOS: Try native Share API first (direct to Photos!)
+                        if (navigator.share && typeof File !== 'undefined') {
+                            try {
+                                const file = new File([blob], filename, { type: finalMimeType });
+                                
+                                // Check if we can share files
+                                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                                    await navigator.share({
+                                        files: [file],
+                                        title: 'Hot Take Debate Recording',
+                                        text: 'Check out my debate!'
+                                    });
+                                    
+                                    downloadDebateModalBtn.textContent = '✓ Shared!';
+                                    setTimeout(() => {
+                                        downloadDebateModalBtn.innerHTML = `
+                                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                                            </svg>
+                                            Download Debate
+                                        `;
+                                    }, 2000);
+                                    return;
+                                }
+                            } catch (shareErr) {
+                                console.warn('Share API failed:', shareErr);
+                                // Continue to fallback
+                            }
+                        }
+                        
+                        // Fallback: iOS: Show video with instructions to save
                         const reader = new FileReader();
                         reader.onloadend = () => {
                             // Create a temporary page to show the video
