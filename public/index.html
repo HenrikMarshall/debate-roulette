@@ -1194,7 +1194,7 @@
 
         <div class="controls">
             <button class="btn-primary" id="findBtn"><span>Find Opponent</span></button>
-            <button class="btn-secondary" id="nextOpponentBtn" disabled><span>Next Opponent</span></button>
+            <button class="btn-secondary" id="nextOpponentBtn" disabled><span>⏭️ Next Opponent</span></button>
             <button class="btn-secondary" id="shareDebateBtn" disabled><span>📤 Share</span></button>
         </div>
 
@@ -1562,8 +1562,8 @@
                     connectionStatus.textContent = 'Matched! Starting soon...';
                     connectionStatus.className = 'connection-status connected';
                     
-                    nextOpponentBtn.disabled = true;
-                    nextOpponentBtn.textContent = 'Next Opponent (wait for round end)';
+                    nextOpponentBtn.disabled = false;
+                    nextOpponentBtn.innerHTML = '<span>⏭️ Next Opponent</span>';
                     shareDebateBtn.disabled = false;
 
                     // Show emoji bar
@@ -1751,9 +1751,9 @@
             const numberEl = document.getElementById('countdownNumber');
             const textEl = overlay.querySelector('.countdown-text');
             
-            // Enable Next Opponent during transition period
+            // Keep Next Opponent enabled during countdown
             nextOpponentBtn.disabled = false;
-            nextOpponentBtn.textContent = 'Next Opponent';
+            nextOpponentBtn.innerHTML = '<span>⏭️ Next Opponent</span>';
             
             overlay.style.display = 'flex';
             textEl.textContent = 'New Topic In...';
@@ -1768,9 +1768,9 @@
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
             
-            // Disable Next Opponent once new round starts
-            nextOpponentBtn.disabled = true;
-            nextOpponentBtn.textContent = 'Next Opponent (wait for round end)';
+            // Keep Next Opponent enabled for new round
+            nextOpponentBtn.disabled = false;
+            nextOpponentBtn.innerHTML = '<span>⏭️ Next Opponent</span>';
             
             overlay.style.display = 'none';
             
@@ -2263,7 +2263,7 @@
             
             findBtn.disabled = false;
             nextOpponentBtn.disabled = true;
-            nextOpponentBtn.textContent = 'Next Opponent';
+            nextOpponentBtn.innerHTML = '<span>⏭️ Next Opponent</span>';
             shareDebateBtn.disabled = true;
             
             currentDebate = null;
