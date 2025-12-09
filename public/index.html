@@ -4076,16 +4076,43 @@
                         // === MOBILE LAYOUT (Stacked, like image 2) ===
                         
                         const padding = 20;
+                        const logoHeight = 80;
                         const topicHeight = 120;
-                        const videoHeight = (canvas.height - topicHeight - padding * 4) / 2;
+                        const videoHeight = (canvas.height - logoHeight - topicHeight - padding * 5) / 2;
                         const videoWidth = canvas.width - padding * 2;
                         
-                        // Topic container (top)
+                        // Logo container (top)
+                        ctx.save();
+                        ctx.fillStyle = '#1a1a24';
+                        ctx.fillRect(0, 0, canvas.width, logoHeight);
+                        
+                        // HOT TAKE title
+                        ctx.font = 'bold 36px "Syne", sans-serif';
+                        ctx.textAlign = 'center';
+                        const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+                        gradient.addColorStop(0, '#ff3366');
+                        gradient.addColorStop(0.5, '#6366ff');
+                        gradient.addColorStop(1, '#00ff88');
+                        ctx.fillStyle = gradient;
+                        ctx.fillText('HOT TAKE', canvas.width / 2, logoHeight / 2 + 8);
+                        
+                        // Subtitle
+                        ctx.fillStyle = '#a0a0b0';
+                        ctx.font = '11px "Space Mono", monospace';
+                        ctx.fillText('RANDOM VIDEO DEBATES', canvas.width / 2, logoHeight - 15);
+                        
+                        // Divider line
+                        ctx.fillStyle = '#00ff88';
+                        ctx.fillRect(0, logoHeight, canvas.width, 2);
+                        ctx.restore();
+                        
+                        // Topic container (below logo)
+                        const topicY = logoHeight + padding;
                         ctx.save();
                         ctx.fillStyle = '#1a1a24';
                         ctx.strokeStyle = '#ff3366';
                         ctx.lineWidth = 3;
-                        roundRect(padding, padding, videoWidth, topicHeight, 20);
+                        roundRect(padding, topicY, videoWidth, topicHeight, 20);
                         ctx.fill();
                         ctx.stroke();
                         
@@ -4093,7 +4120,7 @@
                         ctx.fillStyle = '#00ff88';
                         ctx.font = 'bold 16px "Space Mono", monospace';
                         ctx.textAlign = 'left';
-                        ctx.fillText(`ROUND ${currentRound} • TODAY'S DEBATE TOPIC`, padding + 20, padding + 30);
+                        ctx.fillText(`ROUND ${currentRound} • TODAY'S DEBATE TOPIC`, padding + 20, topicY + 30);
                         
                         // Topic text
                         ctx.fillStyle = '#ffffff';
@@ -4103,7 +4130,7 @@
                         const maxWidth = videoWidth - 40;
                         const words = topicText.split(' ');
                         let line = '';
-                        let y = padding + 60;
+                        let y = topicY + 60;
                         
                         for (let word of words) {
                             const testLine = line + word + ' ';
@@ -4120,7 +4147,7 @@
                         ctx.restore();
                         
                         // Local video (You - top video, highlighted when speaking)
-                        const localY = topicHeight + padding * 2;
+                        const localY = logoHeight + topicHeight + padding * 3;
                         const isLocalSpeaking = isLocalTurn;
                         
                         ctx.save();
