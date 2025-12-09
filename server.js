@@ -47,6 +47,107 @@ const activeDebates = new Map(); // debateId -> { user1, user2, topic, currentSp
 const userSockets = new Map(); // socketId -> userData
 const spectatorRooms = new Map(); // socketId -> debateId (for tracking which debate spectator is watching)
 
+// ═══════════════════════════════════════════════════════════
+// SAFETY INFRASTRUCTURE
+// ═══════════════════════════════════════════════════════════
+const userReports = new Map(); // socketId -> [{reporterId, reason, timestamp, topic}]
+const bannedUsers = new Map(); // socketId -> {bannedUntil, reportCount, reasons[]}
+const blockedPairs = new Map(); // userId -> Set of blocked userIds
+
+// Auto-ban thresholds
+const REPORT_THRESHOLD = 3; // Reports within 24hrs
+const REPORT_WINDOW = 24 * 60 * 60 * 1000; // 24 hours in ms
+const BAN_DURATION = 24 * 60 * 60 * 1000; // 24 hour ban
+
+// Helper: Check if user is banned
+function isUserBanned(socketId) {
+    if (!bannedUsers.has(socketId)) return false;
+    
+    const banInfo = bannedUsers.get(socketId);
+    const now = Date.now();
+    
+    // Check if ban expired
+    if (now > banInfo.bannedUntil) {
+        bannedUsers.delete(socketId);
+        console.log(`⏰ Ban expired for: ${socketId}`);
+        return false;
+    }
+    
+    return true;
+}
+
+// Helper: Get active reports within 24hrs
+function getRecentReports(socketId) {
+    if (!userReports.has(socketId)) return [];
+    
+    const now = Date.now();
+    const reports = userReports.get(socketId);
+    
+    return reports.filter(report => {
+        const reportTime = new Date(report.timestamp).getTime();
+        return (now - reportTime) < REPORT_WINDOW;
+    });
+}
+
+// Helper: Process report and auto-ban if threshold reached
+function processReport(socketId, report) {
+    // Add report
+    if (!userReports.has(socketId)) {
+        userReports.set(socketId, []);
+    }
+    userReports.get(socketId).push(report);
+    
+    // Check recent reports
+    const recentReports = getRecentReports(socketId);
+    
+    console.log(`📊 User ${socketId} has ${recentReports.length} reports in last 24hrs`);
+    
+    // Auto-ban if threshold reached
+    if (recentReports.length >= REPORT_THRESHOLD) {
+        const bannedUntil = Date.now() + BAN_DURATION;
+        const reasons = recentReports.map(r => r.reason);
+        
+        bannedUsers.set(socketId, {
+            bannedUntil: bannedUntil,
+            reportCount: recentReports.length,
+            reasons: reasons,
+            bannedAt: new Date().toISOString()
+        });
+        
+        console.log(`🚫 AUTO-BAN: User ${socketId} banned for 24hrs (${recentReports.length} reports)`);
+        
+        // Disconnect the user
+        const socket = io.sockets.sockets.get(socketId);
+        if (socket) {
+            socket.emit('banned', {
+                reason: 'Multiple reports received',
+                bannedUntil: new Date(bannedUntil).toISOString(),
+                reportCount: recentReports.length
+            });
+            socket.disconnect(true);
+        }
+        
+        return true; // User was banned
+    }
+    
+    return false; // User not banned (yet)
+}
+
+// Helper: Check if two users have blocked each other
+function areUsersBlocked(userId1, userId2) {
+    if (blockedPairs.has(userId1)) {
+        if (blockedPairs.get(userId1).has(userId2)) {
+            return true;
+        }
+    }
+    if (blockedPairs.has(userId2)) {
+        if (blockedPairs.get(userId2).has(userId1)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // Debate topics - 100 controversial topics
 const topics = [
     // Technology & AI (15)
@@ -207,6 +308,22 @@ io.on('connection', (socket) => {
     socket.on('find-opponent', () => {
         console.log(`${socket.id} is looking for opponent`);
 
+        // Check if user is banned
+        if (isUserBanned(socket.id)) {
+            const banInfo = bannedUsers.get(socket.id);
+            const timeLeft = Math.ceil((banInfo.bannedUntil - Date.now()) / (1000 * 60)); // minutes
+            
+            socket.emit('banned', {
+                reason: 'Multiple reports received',
+                bannedUntil: new Date(banInfo.bannedUntil).toISOString(),
+                reportCount: banInfo.reportCount,
+                timeLeftMinutes: timeLeft
+            });
+            
+            console.log(`🚫 Banned user ${socket.id} tried to find opponent (${timeLeft} mins left)`);
+            return;
+        }
+
         // Check if already in queue
         if (waitingUsers.has(socket.id)) {
             socket.emit('error', { message: 'Already in queue' });
@@ -227,8 +344,20 @@ io.on('connection', (socket) => {
         if (waitingUsers.size >= 2) {
             // Get two users from queue
             const usersArray = Array.from(waitingUsers);
-            const user1Id = usersArray[0];
-            const user2Id = usersArray[1];
+            let user1Id = usersArray[0];
+            let user2Id = usersArray[1];
+            
+            // Check if users have blocked each other
+            const user1Data = userSockets.get(user1Id);
+            const user2Data = userSockets.get(user2Id);
+            
+            // Simple block check using socket IDs
+            // In production, you'd use user IDs from authentication
+            if (areUsersBlocked(user1Id, user2Id)) {
+                console.log(`🚫 Users ${user1Id} and ${user2Id} are blocked - skipping match`);
+                // Keep both in queue, they'll match with next available user
+                return;
+            }
 
             // Remove from queue
             waitingUsers.delete(user1Id);
@@ -664,6 +793,125 @@ io.on('connection', (socket) => {
                 io.to(spectatorId).emit('spectator-count-update', {
                     count: debate.spectators.length
                 });
+            });
+        }
+    });
+
+    // ═══════════════════════════════════════════════════════════
+    // SAFETY FEATURES
+    // ═══════════════════════════════════════════════════════════
+    
+    // Report User
+    socket.on('report-user', (data) => {
+        const { reportedSocketId, reporterId, reporterName, reason, topic, timestamp } = data;
+        
+        console.log(`🚩 REPORT: ${reporterId} (${reporterName}) reported ${reportedSocketId} for: ${reason}`);
+        
+        const report = {
+            reporterId: reporterId,
+            reporterName: reporterName,
+            reason: reason,
+            topic: topic,
+            timestamp: timestamp
+        };
+        
+        // Process report and check for auto-ban
+        const wasBanned = processReport(reportedSocketId, report);
+        
+        if (wasBanned) {
+            console.log(`🚫 User ${reportedSocketId} was auto-banned`);
+        } else {
+            const recentCount = getRecentReports(reportedSocketId).length;
+            console.log(`📊 User ${reportedSocketId} now has ${recentCount}/${REPORT_THRESHOLD} reports`);
+        }
+        
+        // Send confirmation to reporter
+        socket.emit('report-received', {
+            success: true,
+            message: 'Report received. Thank you for keeping Hot Take safe.'
+        });
+    });
+    
+    // Block User
+    socket.on('block-user', (data) => {
+        const { blockerId, blockedSocketId, timestamp } = data;
+        
+        console.log(`🚫 BLOCK: ${blockerId} blocked ${blockedSocketId}`);
+        
+        // Add to blocked pairs
+        if (!blockedPairs.has(blockerId)) {
+            blockedPairs.set(blockerId, new Set());
+        }
+        blockedPairs.get(blockerId).add(blockedSocketId);
+        
+        console.log(`✅ Block added: ${blockerId} → ${blockedSocketId}`);
+        
+        socket.emit('block-received', {
+            success: true,
+            message: 'User blocked successfully'
+        });
+    });
+    
+    // Skip Topic Request
+    socket.on('skip-topic-request', () => {
+        const userData = userSockets.get(socket.id);
+        if (!userData || !userData.currentDebate) {
+            socket.emit('error', { message: 'Not in a debate' });
+            return;
+        }
+        
+        const debate = activeDebates.get(userData.currentDebate);
+        if (!debate) {
+            socket.emit('error', { message: 'Debate not found' });
+            return;
+        }
+        
+        const opponentId = debate.user1 === socket.id ? debate.user2 : debate.user1;
+        
+        console.log(`⏭️ SKIP REQUEST: ${socket.id} wants to skip topic: "${debate.topic}"`);
+        
+        // Notify opponent of skip request
+        io.to(opponentId).emit('skip-topic-requested', {
+            requesterId: socket.id,
+            topic: debate.topic
+        });
+        
+        // Notify requester
+        socket.emit('skip-topic-sent', {
+            message: 'Skip request sent to opponent. Waiting for response...'
+        });
+    });
+    
+    // Skip Topic Response
+    socket.on('skip-topic-response', (data) => {
+        const { accepted, requesterId } = data;
+        const userData = userSockets.get(socket.id);
+        
+        if (!userData || !userData.currentDebate) return;
+        
+        const debate = activeDebates.get(userData.currentDebate);
+        if (!debate) return;
+        
+        console.log(`⏭️ SKIP RESPONSE: ${socket.id} ${accepted ? 'ACCEPTED' : 'DECLINED'} skip request`);
+        
+        if (accepted) {
+            // Both agreed - get new topic
+            const newTopic = getRandomTopic();
+            debate.topic = newTopic;
+            
+            console.log(`✅ Topic skipped! New topic: "${newTopic}"`);
+            
+            // Notify both users
+            io.to(debate.user1).emit('topic-skipped', {
+                newTopic: newTopic
+            });
+            io.to(debate.user2).emit('topic-skipped', {
+                newTopic: newTopic
+            });
+        } else {
+            // Declined
+            io.to(requesterId).emit('skip-topic-declined', {
+                message: 'Opponent declined to skip topic'
             });
         }
     });

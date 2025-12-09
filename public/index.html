@@ -423,9 +423,66 @@
             border: 2px solid rgba(255, 255, 255, 0.2);
         }
 
+        .debate-end-btn.warning {
+            background: linear-gradient(135deg, #ff3366, #cc0033);
+            color: white;
+            border: none;
+        }
+
+        .debate-end-btn.warning:hover {
+            box-shadow: 0 10px 30px rgba(255, 51, 102, 0.4);
+        }
+
         .debate-end-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
+        }
+
+        /* Report Reason Buttons */
+        .report-reason-btn {
+            padding: 15px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: var(--text);
+            font-family: 'Space Mono', monospace;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .report-reason-btn:hover {
+            background: rgba(255, 51, 102, 0.2);
+            border-color: var(--primary);
+            transform: translateX(5px);
+        }
+
+        /* Skip Topic Button */
+        .skip-topic-btn {
+            padding: 10px 20px;
+            background: rgba(255, 187, 51, 0.2);
+            border: 2px solid #ffbb33;
+            border-radius: 10px;
+            color: #ffbb33;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .skip-topic-btn:hover {
+            background: rgba(255, 187, 51, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .skip-topic-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         /* Social Sharing */
@@ -1337,8 +1394,52 @@
                     <button class="debate-end-btn secondary" id="watchDebatesBtn">
                         👁️ Watch Debates
                     </button>
+                    <button class="debate-end-btn warning" id="reportUserBtn" style="background: linear-gradient(135deg, #ff3366, #cc0033); border: none;">
+                        🚩 Report User
+                    </button>
+                    <button class="debate-end-btn warning" id="blockUserBtn" style="background: rgba(255, 51, 102, 0.2); border: 2px solid #ff3366;">
+                        🚫 Block User
+                    </button>
                     <button class="debate-end-btn secondary" id="closeDebateEndBtn">
                         Close
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Report User Modal -->
+        <div class="debate-end-modal" id="reportUserModal" style="display: none;">
+            <div class="debate-end-card" style="max-width: 500px;">
+                <div class="debate-end-title">🚩 Report User</div>
+                
+                <p style="color: var(--text-dim); margin-bottom: 20px; text-align: left;">
+                    Help us keep Hot Take safe. Why are you reporting this user?
+                </p>
+
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px;">
+                    <button class="report-reason-btn" data-reason="harassment">
+                        Harassment or hate speech
+                    </button>
+                    <button class="report-reason-btn" data-reason="inappropriate">
+                        Inappropriate content
+                    </button>
+                    <button class="report-reason-btn" data-reason="spam">
+                        Spam or advertising
+                    </button>
+                    <button class="report-reason-btn" data-reason="threatening">
+                        Threatening behavior
+                    </button>
+                    <button class="report-reason-btn" data-reason="underage">
+                        Appears to be underage
+                    </button>
+                    <button class="report-reason-btn" data-reason="other">
+                        Other violation
+                    </button>
+                </div>
+
+                <div class="debate-end-buttons">
+                    <button class="debate-end-btn secondary" id="cancelReportBtn">
+                        Cancel
                     </button>
                 </div>
             </div>
@@ -1508,15 +1609,21 @@
         
         // Performance tracking
         window.addEventListener('load', () => {
-            if (window.performance && window.performance.timing) {
-                const perfData = window.performance.timing;
-                const pageLoadTime = perfData.loadEventEnd - perfData.navigationStart;
-                
-                trackEvent('Page Performance', {
-                    'Load Time (ms)': pageLoadTime,
-                    'Load Time (s)': Math.floor(pageLoadTime / 1000)
-                });
-            }
+            // Wait a bit for timing data to be fully populated
+            setTimeout(() => {
+                if (window.performance && window.performance.timing) {
+                    const perfData = window.performance.timing;
+                    const pageLoadTime = perfData.loadEventEnd - perfData.navigationStart;
+                    
+                    // Only track if we have valid timing data
+                    if (pageLoadTime > 0 && pageLoadTime < 60000) { // Less than 60 seconds
+                        trackEvent('Page Performance', {
+                            'Load Time (ms)': pageLoadTime,
+                            'Load Time (s)': Math.floor(pageLoadTime / 1000)
+                        });
+                    }
+                }
+            }, 100);
         });
 
         // WebRTC Configuration
@@ -2430,6 +2537,112 @@
 
         closeDebateEndBtn.addEventListener('click', () => {
             debateEndModal.classList.remove('active');
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        // SAFETY FEATURES: Report & Block
+        // ═══════════════════════════════════════════════════════════
+        
+        const reportUserBtn = document.getElementById('reportUserBtn');
+        const blockUserBtn = document.getElementById('blockUserBtn');
+        const reportUserModal = document.getElementById('reportUserModal');
+        const cancelReportBtn = document.getElementById('cancelReportBtn');
+        let lastOpponentId = null;
+        let lastOpponentSocketId = null;
+        let lastDebateTopic = null;
+        
+        // Track opponent info during debate
+        socket.on('debate-matched', (data) => {
+            lastOpponentSocketId = data.opponentId;
+            lastDebateTopic = data.topic;
+        });
+        
+        // Report User Button
+        reportUserBtn.addEventListener('click', () => {
+            if (!lastOpponentSocketId) {
+                alert('No opponent to report');
+                return;
+            }
+            
+            debateEndModal.classList.remove('active');
+            reportUserModal.style.display = 'flex';
+            
+            trackEvent('Report User Opened', {
+                'Topic': lastDebateTopic
+            });
+        });
+        
+        // Report Reason Buttons
+        document.querySelectorAll('.report-reason-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const reason = btn.getAttribute('data-reason');
+                
+                // Send report to server
+                socket.emit('report-user', {
+                    reportedSocketId: lastOpponentSocketId,
+                    reporterId: currentUser ? currentUser.uid : 'anonymous',
+                    reporterName: currentUser ? currentUser.name : 'Anonymous',
+                    reason: reason,
+                    topic: lastDebateTopic,
+                    timestamp: new Date().toISOString()
+                });
+                
+                // Track in Mixpanel
+                trackEvent('User Reported', {
+                    'Reason': reason,
+                    'Topic': lastDebateTopic
+                });
+                
+                // Show confirmation
+                reportUserModal.style.display = 'none';
+                alert('✅ Report submitted. Thank you for helping keep Hot Take safe.');
+                
+                console.log('🚩 Reported user:', {
+                    socketId: lastOpponentSocketId,
+                    reason: reason,
+                    topic: lastDebateTopic
+                });
+            });
+        });
+        
+        // Cancel Report
+        cancelReportBtn.addEventListener('click', () => {
+            reportUserModal.style.display = 'none';
+        });
+        
+        // Block User Button
+        blockUserBtn.addEventListener('click', () => {
+            if (!lastOpponentSocketId) {
+                alert('No opponent to block');
+                return;
+            }
+            
+            if (confirm('⚠️ Block this user?\n\nYou will never be matched with them again.')) {
+                // Add to blocked list in localStorage
+                const blockedUsers = JSON.parse(localStorage.getItem('blockedUsers') || '[]');
+                if (!blockedUsers.includes(lastOpponentSocketId)) {
+                    blockedUsers.push(lastOpponentSocketId);
+                    localStorage.setItem('blockedUsers', JSON.stringify(blockedUsers));
+                }
+                
+                // Send to server
+                socket.emit('block-user', {
+                    blockerId: currentUser ? currentUser.uid : 'anonymous',
+                    blockedSocketId: lastOpponentSocketId,
+                    timestamp: new Date().toISOString()
+                });
+                
+                // Track in Mixpanel
+                trackEvent('User Blocked', {
+                    'Topic': lastDebateTopic
+                });
+                
+                alert('✅ User blocked. You will not be matched with them again.');
+                
+                console.log('🚫 Blocked user:', lastOpponentSocketId);
+                
+                debateEndModal.classList.remove('active');
+            }
         });
 
         // Social sharing handlers
