@@ -2298,26 +2298,89 @@
             const duration = debateDuration.textContent;
             const text = `I just debated ${rounds} rounds on Hot Take! 🎤⚡ Think you can beat me? `;
             const url = window.location.origin;
-            const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
-            window.open(twitterUrl, '_blank', 'width=550,height=420');
+            
+            if (isMobile) {
+                // Mobile: Try to open Twitter app, fallback to web
+                const twitterAppUrl = `twitter://post?message=${encodeURIComponent(text + ' ' + url)}`;
+                const twitterWebUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+                
+                window.location.href = twitterAppUrl;
+                setTimeout(() => {
+                    window.open(twitterWebUrl, '_blank');
+                }, 500);
+            } else {
+                // Desktop: Open website
+                const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+                window.open(twitterUrl, '_blank', 'width=550,height=420');
+            }
         });
 
         shareFacebookBtn.addEventListener('click', () => {
             const url = window.location.origin;
-            const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
-            window.open(facebookUrl, '_blank', 'width=550,height=420');
+            
+            if (isMobile) {
+                // Mobile: Try to open Facebook app, fallback to web
+                const fbAppUrl = `fb://facewebmodal/f?href=${encodeURIComponent(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`)}`;
+                const fbWebUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+                
+                window.location.href = fbAppUrl;
+                setTimeout(() => {
+                    window.open(fbWebUrl, '_blank');
+                }, 500);
+            } else {
+                // Desktop: Open website
+                const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+                window.open(facebookUrl, '_blank', 'width=550,height=420');
+            }
         });
         
         shareYouTubeBtn.addEventListener('click', () => {
-            alert('🎥 Upload to YouTube:\n\n1. Click "Download Debate" to save your video\n2. Go to youtube.com/upload\n3. Upload your video file\n4. Add #HotTake in the description!');
+            if (isMobile) {
+                // Mobile: Prompt to download, then offer to open YouTube app
+                alert('📺 Share to YouTube:\n\n1. Click "Download Debate" first\n2. We\'ll open the YouTube app for you\n3. Tap + to upload your video\n4. Add #HotTake in description!');
+                setTimeout(() => {
+                    // Try to open YouTube app
+                    window.location.href = 'youtube://';
+                }, 1000);
+            } else {
+                // Desktop: Open YouTube upload page
+                alert('🎥 Upload to YouTube:\n\n1. Click "Download Debate" to save your video\n2. We\'ll open YouTube upload page\n3. Upload your video file\n4. Add #HotTake in the description!');
+                setTimeout(() => {
+                    window.open('https://www.youtube.com/upload', '_blank');
+                }, 1000);
+            }
         });
         
         shareTikTokBtn.addEventListener('click', () => {
-            alert('📱 Share to TikTok:\n\n1. Click "Download Debate" to save your video\n2. Open TikTok app\n3. Tap + to create\n4. Upload your video\n5. Add #HotTake hashtag!');
+            if (isMobile) {
+                // Mobile: Try to open TikTok app
+                alert('📱 Share to TikTok:\n\n1. Click "Download Debate" first\n2. We\'ll open TikTok for you\n3. Tap + to create\n4. Upload your video\n5. Add #HotTake hashtag!');
+                setTimeout(() => {
+                    window.location.href = 'tiktok://';
+                }, 1000);
+            } else {
+                // Desktop: Open TikTok web
+                alert('📱 Share to TikTok:\n\n1. Click "Download Debate" to save your video\n2. Open tiktok.com on your phone\n3. Upload your video\n4. Add #HotTake hashtag!');
+                setTimeout(() => {
+                    window.open('https://www.tiktok.com/upload', '_blank');
+                }, 1000);
+            }
         });
         
         shareInstagramBtn.addEventListener('click', () => {
-            alert('📸 Share to Instagram:\n\n1. Click "Download Debate" to save your video\n2. Open Instagram app\n3. Create new Reel or Story\n4. Upload your video\n5. Add #HotTake hashtag!');
+            if (isMobile) {
+                // Mobile: Try to open Instagram app
+                alert('📸 Share to Instagram:\n\n1. Click "Download Debate" first\n2. We\'ll open Instagram for you\n3. Create Reel or Story\n4. Upload your video\n5. Add #HotTake hashtag!');
+                setTimeout(() => {
+                    window.location.href = 'instagram://';
+                }, 1000);
+            } else {
+                // Desktop: Open Instagram web
+                alert('📸 Share to Instagram:\n\n1. Download your debate video first\n2. Open Instagram on your phone\n3. Create new Reel or Story\n4. Upload your video\n5. Add #HotTake hashtag!');
+                setTimeout(() => {
+                    window.open('https://www.instagram.com', '_blank');
+                }, 1000);
+            }
         });
 
         copyLinkBtn.addEventListener('click', async () => {
@@ -2345,17 +2408,24 @@
         downloadDebateModalBtn.addEventListener('click', () => {
             // Download the recorded debate
             if (recordedChunks.length > 0) {
-                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                // Detect the actual mime type used
+                const mimeType = recordedChunks[0].type;
+                const isH264 = mimeType.includes('h264');
+                
+                const blob = new Blob(recordedChunks, { type: mimeType });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 const timestamp = new Date().toISOString().slice(0,10);
-                link.download = `hot-take-debate-${timestamp}.webm`;
+                
+                // Use .mp4 extension for H.264, .webm for VP9
+                const extension = isH264 ? 'mp4' : 'webm';
+                link.download = `hot-take-debate-${timestamp}.${extension}`;
                 link.href = url;
                 link.click();
                 URL.revokeObjectURL(url);
                 
                 // Visual feedback
-                downloadDebateModalBtn.textContent = '✓ Downloaded!';
+                downloadDebateModalBtn.textContent = `✓ Downloaded as ${extension.toUpperCase()}!`;
                 setTimeout(() => {
                     downloadDebateModalBtn.innerHTML = `
                         <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
@@ -2385,10 +2455,21 @@
             try {
                 console.log('Starting automatic debate recording...');
                 
-                // Capture both video streams combined
+                // Detect device type for layout
+                const isMobileDevice = window.innerWidth <= 768;
+                
+                // Set canvas size based on device
                 const canvas = document.createElement('canvas');
-                canvas.width = 1280;
-                canvas.height = 720;
+                if (isMobileDevice) {
+                    // Mobile: Portrait, stacked layout (like image 2)
+                    canvas.width = 720;
+                    canvas.height = 1280;
+                } else {
+                    // Desktop: Landscape, side-by-side (like image 1)
+                    canvas.width = 1280;
+                    canvas.height = 720;
+                }
+                
                 const ctx = canvas.getContext('2d');
                 
                 // Create a MediaStream from canvas
@@ -2414,35 +2495,394 @@
                     ...destination.stream.getAudioTracks()
                 ]);
                 
-                // Draw both videos to canvas continuously
+                // Helper to draw rounded rectangle
+                const roundRect = (x, y, width, height, radius) => {
+                    ctx.beginPath();
+                    ctx.moveTo(x + radius, y);
+                    ctx.lineTo(x + width - radius, y);
+                    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+                    ctx.lineTo(x + width, y + height - radius);
+                    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                    ctx.lineTo(x + radius, y + height);
+                    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+                    ctx.lineTo(x, y + radius);
+                    ctx.quadraticCurveTo(x, y, x + radius, y);
+                    ctx.closePath();
+                };
+                
+                // Draw frame function with professional layout
                 const drawFrame = () => {
                     if (!mediaRecorder || mediaRecorder.state !== 'recording') return;
                     
+                    // Background
                     ctx.fillStyle = '#0a0a0f';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                     
-                    // Draw local video (left side)
-                    if (localVideo.videoWidth > 0) {
-                        ctx.drawImage(localVideo, 0, 0, 640, 720);
+                    if (isMobileDevice) {
+                        // === MOBILE LAYOUT (Stacked, like image 2) ===
+                        
+                        const padding = 20;
+                        const topicHeight = 120;
+                        const videoHeight = (canvas.height - topicHeight - padding * 4) / 2;
+                        const videoWidth = canvas.width - padding * 2;
+                        
+                        // Topic container (top)
+                        ctx.save();
+                        ctx.fillStyle = '#1a1a24';
+                        ctx.strokeStyle = '#ff3366';
+                        ctx.lineWidth = 3;
+                        roundRect(padding, padding, videoWidth, topicHeight, 20);
+                        ctx.fill();
+                        ctx.stroke();
+                        
+                        // Round number
+                        ctx.fillStyle = '#00ff88';
+                        ctx.font = 'bold 16px "Space Mono", monospace';
+                        ctx.textAlign = 'left';
+                        ctx.fillText(`ROUND ${currentRound} • TODAY'S DEBATE TOPIC`, padding + 20, padding + 30);
+                        
+                        // Topic text
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 20px "Space Mono", monospace';
+                        ctx.textAlign = 'center';
+                        const topicText = topicElement.textContent;
+                        const maxWidth = videoWidth - 40;
+                        const words = topicText.split(' ');
+                        let line = '';
+                        let y = padding + 60;
+                        
+                        for (let word of words) {
+                            const testLine = line + word + ' ';
+                            const metrics = ctx.measureText(testLine);
+                            if (metrics.width > maxWidth && line !== '') {
+                                ctx.fillText(line, canvas.width / 2, y);
+                                line = word + ' ';
+                                y += 25;
+                            } else {
+                                line = testLine;
+                            }
+                        }
+                        ctx.fillText(line, canvas.width / 2, y);
+                        ctx.restore();
+                        
+                        // Local video (You - top video, highlighted when speaking)
+                        const localY = topicHeight + padding * 2;
+                        const isLocalSpeaking = isLocalTurn;
+                        
+                        ctx.save();
+                        ctx.fillStyle = '#1a1a24';
+                        ctx.strokeStyle = isLocalSpeaking ? '#00ff88' : 'rgba(255,255,255,0.2)';
+                        ctx.lineWidth = isLocalSpeaking ? 4 : 2;
+                        roundRect(padding, localY, videoWidth, videoHeight, 20);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.clip();
+                        roundRect(padding, localY, videoWidth, videoHeight, 20);
+                        
+                        if (localVideo.videoWidth > 0) {
+                            // Calculate aspect ratio fit
+                            const videoAspect = localVideo.videoWidth / localVideo.videoHeight;
+                            const containerAspect = videoWidth / videoHeight;
+                            let drawWidth, drawHeight, drawX, drawY;
+                            
+                            if (videoAspect > containerAspect) {
+                                drawHeight = videoHeight;
+                                drawWidth = drawHeight * videoAspect;
+                                drawX = padding + (videoWidth - drawWidth) / 2;
+                                drawY = localY;
+                            } else {
+                                drawWidth = videoWidth;
+                                drawHeight = drawWidth / videoAspect;
+                                drawX = padding;
+                                drawY = localY + (videoHeight - drawHeight) / 2;
+                            }
+                            
+                            ctx.drawImage(localVideo, drawX, drawY, drawWidth, drawHeight);
+                        }
+                        ctx.restore();
+                        
+                        // Status badge (You)
+                        if (isLocalSpeaking) {
+                            ctx.fillStyle = '#ff3366';
+                            ctx.font = 'bold 14px "Space Mono", monospace';
+                            ctx.textAlign = 'left';
+                            roundRect(padding + 15, localY + 15, 100, 30, 15);
+                            ctx.fill();
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fillText('SPEAKING', padding + 30, localY + 35);
+                        }
+                        
+                        // Label (You)
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 18px "Space Mono", monospace';
+                        ctx.textAlign = 'left';
+                        ctx.fillText('You', padding + 20, localY + videoHeight - 20);
+                        
+                        // Timer
+                        ctx.fillStyle = '#00ff88';
+                        ctx.font = 'bold 24px "Space Mono", monospace';
+                        ctx.textAlign = 'right';
+                        ctx.fillText(`${timeRemaining}s`, padding + videoWidth - 20, localY + videoHeight - 20);
+                        
+                        // Remote video (Opponent - bottom video)
+                        const remoteY = localY + videoHeight + padding;
+                        const isRemoteSpeaking = !isLocalTurn && currentDebate;
+                        
+                        ctx.save();
+                        ctx.fillStyle = '#1a1a24';
+                        ctx.strokeStyle = isRemoteSpeaking ? '#00ff88' : 'rgba(255,255,255,0.2)';
+                        ctx.lineWidth = isRemoteSpeaking ? 4 : 2;
+                        roundRect(padding, remoteY, videoWidth, videoHeight, 20);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.clip();
+                        roundRect(padding, remoteY, videoWidth, videoHeight, 20);
+                        
+                        if (remoteVideo.videoWidth > 0) {
+                            const videoAspect = remoteVideo.videoWidth / remoteVideo.videoHeight;
+                            const containerAspect = videoWidth / videoHeight;
+                            let drawWidth, drawHeight, drawX, drawY;
+                            
+                            if (videoAspect > containerAspect) {
+                                drawHeight = videoHeight;
+                                drawWidth = drawHeight * videoAspect;
+                                drawX = padding + (videoWidth - drawWidth) / 2;
+                                drawY = remoteY;
+                            } else {
+                                drawWidth = videoWidth;
+                                drawHeight = drawWidth / videoAspect;
+                                drawX = padding;
+                                drawY = remoteY + (videoHeight - drawHeight) / 2;
+                            }
+                            
+                            ctx.drawImage(remoteVideo, drawX, drawY, drawWidth, drawHeight);
+                        }
+                        ctx.restore();
+                        
+                        // Status badge (Opponent)
+                        if (isRemoteSpeaking) {
+                            ctx.fillStyle = '#ff3366';
+                            roundRect(padding + 15, remoteY + 15, 100, 30, 15);
+                            ctx.fill();
+                            ctx.fillStyle = '#ffffff';
+                            ctx.font = 'bold 14px "Space Mono", monospace';
+                            ctx.textAlign = 'left';
+                            ctx.fillText('SPEAKING', padding + 30, remoteY + 35);
+                        } else if (currentDebate) {
+                            ctx.fillStyle = '#6366ff';
+                            roundRect(padding + 15, remoteY + 15, 80, 30, 15);
+                            ctx.fill();
+                            ctx.fillStyle = '#ffffff';
+                            ctx.font = 'bold 14px "Space Mono", monospace';
+                            ctx.textAlign = 'left';
+                            ctx.fillText('MUTED', padding + 30, remoteY + 35);
+                        }
+                        
+                        // Label (Opponent)
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 18px "Space Mono", monospace';
+                        ctx.textAlign = 'left';
+                        ctx.fillText('Opponent', padding + 20, remoteY + videoHeight - 20);
+                        
+                        // Timer
+                        ctx.fillStyle = '#00ff88';
+                        ctx.font = 'bold 24px "Space Mono", monospace';
+                        ctx.textAlign = 'right';
+                        ctx.fillText(`${timeRemaining}s`, padding + videoWidth - 20, remoteY + videoHeight - 20);
+                        
+                    } else {
+                        // === DESKTOP LAYOUT (Side-by-side, like image 1) ===
+                        
+                        const padding = 15;
+                        const topBarHeight = 100;
+                        const statusBarHeight = 40;
+                        const videoY = topBarHeight + statusBarHeight + padding;
+                        const videoHeight = canvas.height - videoY - padding;
+                        const videoWidth = (canvas.width - padding * 3) / 2;
+                        
+                        // Top bar with title
+                        ctx.fillStyle = '#1a1a24';
+                        ctx.fillRect(0, 0, canvas.width, topBarHeight);
+                        
+                        // HOT TAKE title
+                        ctx.fillStyle = '#fff';
+                        ctx.font = 'bold 48px "Syne", sans-serif';
+                        ctx.textAlign = 'center';
+                        const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+                        gradient.addColorStop(0, '#ff3366');
+                        gradient.addColorStop(0.5, '#6366ff');
+                        gradient.addColorStop(1, '#00ff88');
+                        ctx.fillStyle = gradient;
+                        ctx.fillText('HOT TAKE', canvas.width / 2, 55);
+                        
+                        // Subtitle
+                        ctx.fillStyle = '#a0a0b0';
+                        ctx.font = '14px "Space Mono", monospace';
+                        ctx.fillText('RANDOM VIDEO DEBATES • 30 SECONDS EACH SIDE', canvas.width / 2, 85);
+                        
+                        // Status bar
+                        ctx.fillStyle = '#00ff88';
+                        ctx.fillRect(0, topBarHeight, canvas.width, 3);
+                        
+                        ctx.fillStyle = '#1a1a24';
+                        ctx.fillRect(0, topBarHeight + 3, canvas.width, statusBarHeight - 3);
+                        
+                        ctx.fillStyle = '#fff';
+                        ctx.font = '16px "Space Mono", monospace';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Connected - Click "Find Opponent" to start', canvas.width / 2, topBarHeight + 25);
+                        
+                        // Topic container
+                        const topicY = topBarHeight + statusBarHeight + padding;
+                        const topicHeight = 80;
+                        
+                        ctx.save();
+                        ctx.fillStyle = '#1a1a24';
+                        ctx.strokeStyle = '#ff3366';
+                        ctx.lineWidth = 2;
+                        roundRect(padding, topicY, canvas.width - padding * 2, topicHeight, 15);
+                        ctx.fill();
+                        ctx.stroke();
+                        
+                        // Round number
+                        ctx.fillStyle = '#00ff88';
+                        ctx.font = 'bold 12px "Space Mono", monospace';
+                        ctx.textAlign = 'left';
+                        ctx.fillText(`ROUND ${currentRound} • TODAY'S DEBATE TOPIC`, padding + 20, topicY + 25);
+                        
+                        // Topic text
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 18px "Space Mono", monospace';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(topicElement.textContent, canvas.width / 2, topicY + 55);
+                        ctx.restore();
+                        
+                        // Video containers
+                        const videoStartY = topicY + topicHeight + padding;
+                        const actualVideoHeight = canvas.height - videoStartY - padding;
+                        
+                        // Local video (You - left side)
+                        ctx.save();
+                        ctx.fillStyle = '#1a1a24';
+                        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                        ctx.lineWidth = 2;
+                        roundRect(padding, videoStartY, videoWidth, actualVideoHeight, 20);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.clip();
+                        roundRect(padding, videoStartY, videoWidth, actualVideoHeight, 20);
+                        
+                        if (localVideo.videoWidth > 0) {
+                            const videoAspect = localVideo.videoWidth / localVideo.videoHeight;
+                            const containerAspect = videoWidth / actualVideoHeight;
+                            let drawWidth, drawHeight, drawX, drawY;
+                            
+                            if (videoAspect > containerAspect) {
+                                drawHeight = actualVideoHeight;
+                                drawWidth = drawHeight * videoAspect;
+                                drawX = padding + (videoWidth - drawWidth) / 2;
+                                drawY = videoStartY;
+                            } else {
+                                drawWidth = videoWidth;
+                                drawHeight = drawWidth / videoAspect;
+                                drawX = padding;
+                                drawY = videoStartY + (actualVideoHeight - drawHeight) / 2;
+                            }
+                            
+                            ctx.drawImage(localVideo, drawX, drawY, drawWidth, drawHeight);
+                        }
+                        ctx.restore();
+                        
+                        // Status badge (You)
+                        const isLocalWaiting = !currentDebate;
+                        ctx.fillStyle = isLocalWaiting ? '#ff3366' : (isLocalTurn ? '#ff3366' : '#6366ff');
+                        roundRect(padding + 15, videoStartY + 15, isLocalWaiting ? 90 : 100, 30, 15);
+                        ctx.fill();
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 14px "Space Mono", monospace';
+                        ctx.textAlign = 'left';
+                        ctx.fillText(isLocalWaiting ? 'WAITING' : (isLocalTurn ? 'SPEAKING' : 'MUTED'), padding + 25, videoStartY + 35);
+                        
+                        // Label and divider (You)
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 24px "Space Mono", monospace';
+                        ctx.textAlign = 'left';
+                        ctx.fillText('You', padding + 20, videoStartY + actualVideoHeight - 25);
+                        
+                        ctx.fillStyle = '#00ff88';
+                        ctx.fillRect(padding + 80, videoStartY + actualVideoHeight - 40, 2, 20);
+                        ctx.fillText('--', padding + 90, videoStartY + actualVideoHeight - 25);
+                        
+                        // Remote video (Opponent - right side)
+                        const remoteX = padding * 2 + videoWidth;
+                        
+                        ctx.save();
+                        ctx.fillStyle = '#1a1a24';
+                        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                        ctx.lineWidth = 2;
+                        roundRect(remoteX, videoStartY, videoWidth, actualVideoHeight, 20);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.clip();
+                        roundRect(remoteX, videoStartY, videoWidth, actualVideoHeight, 20);
+                        
+                        if (remoteVideo.videoWidth > 0) {
+                            const videoAspect = remoteVideo.videoWidth / remoteVideo.videoHeight;
+                            const containerAspect = videoWidth / actualVideoHeight;
+                            let drawWidth, drawHeight, drawX, drawY;
+                            
+                            if (videoAspect > containerAspect) {
+                                drawHeight = actualVideoHeight;
+                                drawWidth = drawHeight * videoAspect;
+                                drawX = remoteX + (videoWidth - drawWidth) / 2;
+                                drawY = videoStartY;
+                            } else {
+                                drawWidth = videoWidth;
+                                drawHeight = drawWidth / videoAspect;
+                                drawX = remoteX;
+                                drawY = videoStartY + (actualVideoHeight - drawHeight) / 2;
+                            }
+                            
+                            ctx.drawImage(remoteVideo, drawX, drawY, drawWidth, drawHeight);
+                        }
+                        ctx.restore();
+                        
+                        // Status badge (Opponent)
+                        const isRemoteWaiting = !currentDebate;
+                        const isRemoteSpeaking = !isLocalTurn && currentDebate;
+                        ctx.fillStyle = isRemoteWaiting ? '#ff3366' : (isRemoteSpeaking ? '#ff3366' : '#6366ff');
+                        roundRect(remoteX + 15, videoStartY + 15, isRemoteWaiting ? 90 : 100, 30, 15);
+                        ctx.fill();
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 14px "Space Mono", monospace';
+                        ctx.textAlign = 'left';
+                        ctx.fillText(isRemoteWaiting ? 'WAITING' : (isRemoteSpeaking ? 'SPEAKING' : 'MUTED'), remoteX + 25, videoStartY + 35);
+                        
+                        // Label and divider (Opponent)
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 24px "Space Mono", monospace';
+                        ctx.textAlign = 'left';
+                        ctx.fillText('Opponent', remoteX + 20, videoStartY + actualVideoHeight - 25);
+                        
+                        ctx.fillStyle = '#00ff88';
+                        ctx.fillRect(remoteX + 140, videoStartY + actualVideoHeight - 40, 2, 20);
+                        ctx.fillText('--', remoteX + 150, videoStartY + actualVideoHeight - 25);
                     }
-                    
-                    // Draw remote video (right side)
-                    if (remoteVideo.videoWidth > 0) {
-                        ctx.drawImage(remoteVideo, 640, 0, 640, 720);
-                    }
-                    
-                    // Draw topic text at top
-                    ctx.fillStyle = '#fff';
-                    ctx.font = 'bold 24px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(topicElement.textContent, 640, 40);
                     
                     requestAnimationFrame(drawFrame);
                 };
                 
                 recordedChunks = [];
+                
+                // Try H.264 for MP4, fallback to WebM if not supported
+                let mimeType = 'video/webm;codecs=h264';
+                if (!MediaRecorder.isTypeSupported(mimeType)) {
+                    mimeType = 'video/webm;codecs=vp9';
+                    console.log('H.264 not supported, using VP9');
+                }
+                
                 mediaRecorder = new MediaRecorder(combinedStream, {
-                    mimeType: 'video/webm;codecs=vp9',
+                    mimeType: mimeType,
                     videoBitsPerSecond: 2500000
                 });
 
@@ -2455,9 +2895,28 @@
                 mediaRecorder.onstop = () => {
                     console.log('Recording stopped. Chunks collected:', recordedChunks.length);
                     
-                    // Enable download button
-                    
                     // Hide recording indicator
+                    if (recordingIndicator) {
+                        recordingIndicator.style.display = 'none';
+                    }
+                };
+
+                mediaRecorder.start();
+                drawFrame();
+                
+                // Show recording indicator
+                if (recordingIndicator) {
+                    recordingIndicator.style.display = 'flex';
+                    recordingTime.textContent = 'REC';
+                }
+                
+                console.log('Debate recording started successfully');
+
+            } catch (err) {
+                console.error('Error starting recording:', err);
+                // Don't alert user - recording is optional
+            }
+        }
                     if (recordingIndicator) {
                         recordingIndicator.style.display = 'none';
                     }
