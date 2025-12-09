@@ -2380,6 +2380,14 @@
         const topicElement = document.getElementById('topic');
         const connectionStatus = document.getElementById('connectionStatus');
         const findBtn = document.getElementById('findBtn');
+        const upgradeBtn = document.getElementById('upgradeBtn');
+        
+        console.log('🔍 Debug - Button elements:', {
+            findBtn: findBtn ? 'Found ✅' : 'NOT FOUND ❌',
+            upgradeBtn: upgradeBtn ? 'Found ✅' : 'NOT FOUND ❌',
+            findBtnDisabled: findBtn?.disabled,
+            upgradeBtnDisabled: upgradeBtn?.disabled
+        });
         const nextOpponentBtn = document.getElementById('nextOpponentBtn');
         const shareDebateBtn = document.getElementById('shareDebateBtn');
         const localTimer = document.getElementById('localTimer');
@@ -3000,6 +3008,12 @@
         // Button handlers
         findBtn.addEventListener('click', async () => {
             console.log('🎯 Find Opponent clicked');
+            console.log('🔍 Debug - Button state:', {
+                disabled: findBtn.disabled,
+                classList: findBtn.className,
+                socketExists: !!socket,
+                socketConnected: socket?.connected
+            });
             console.log('Socket status:', socket ? (socket.connected ? 'Connected ✅' : 'Not connected ❌') : 'Not initialized ❌');
             
             // Track button click
@@ -4616,6 +4630,13 @@
         
         // Open premium modal
         upgradeBtn.addEventListener('click', () => {
+            console.log('👑 PRO button clicked');
+            console.log('🔍 Debug - Premium modal state:', {
+                modalExists: !!premiumModal,
+                modalClass: premiumModal?.className,
+                buttonDisabled: upgradeBtn.disabled
+            });
+            
             premiumModal.classList.add('active');
             
             trackEvent('Premium Modal Opened', {
