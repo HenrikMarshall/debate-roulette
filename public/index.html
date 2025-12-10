@@ -1745,7 +1745,6 @@
         <div class="controls">
             <button class="btn-primary" id="findBtn"><span>Find Opponent</span></button>
             <button class="btn-secondary" id="nextOpponentBtn" disabled><span>⏭️ Next Opponent</span></button>
-            <button class="btn-secondary" id="shareDebateBtn" disabled><span>📤 Share</span></button>
         </div>
 
         <!-- Emoji Reaction Bar -->
@@ -2416,7 +2415,7 @@
             upgradeBtnDisabled: upgradeBtn?.disabled
         });
         const nextOpponentBtn = document.getElementById('nextOpponentBtn');
-        const shareDebateBtn = document.getElementById('shareDebateBtn');
+        // const shareDebateBtn = document.getElementById('shareDebateBtn'); // REMOVED
         const localTimer = document.getElementById('localTimer');
         const remoteTimer = document.getElementById('remoteTimer');
         const localVideoWrapper = document.getElementById('localVideoWrapper');
@@ -2515,7 +2514,7 @@
                     
                     nextOpponentBtn.disabled = false;
                     nextOpponentBtn.innerHTML = '<span>⏭️ Next Opponent</span>';
-                    shareDebateBtn.disabled = false;
+                    // shareDebateBtn.disabled = false; // REMOVED
 
                     // Show emoji bar
                     emojiBar.style.display = 'flex';
@@ -2611,19 +2610,36 @@
                 });
 
                 socket.on('opponent-disconnected', () => {
+                    console.log('⚠️ Opponent disconnected');
+                    
                     // Hide loading overlay if showing
                     loadingOverlay.classList.remove('active');
                     
-                    // Show better disconnect message
-                    if (confirm('Your opponent disconnected. Find a new opponent?')) {
-                        endDebateCleanup();
-                        // Auto-search for new opponent
-                        setTimeout(() => {
-                            findBtn.click();
-                        }, 500);
-                    } else {
-                        endDebateCleanup();
+                    // Stop recording if active
+                    if (mediaRecorder && mediaRecorder.state === 'recording') {
+                        mediaRecorder.stop();
+                        console.log('🎥 Recording stopped due to opponent disconnect');
                     }
+                    
+                    // Clean up debate state
+                    endDebateCleanup();
+                    
+                    // Show debate end modal with disconnect message
+                    debateEndModal.classList.add('active');
+                    debateEndTitle.textContent = '⚠️ Opponent Left';
+                    debateEndSubtitle.textContent = 'Your opponent disconnected from the debate';
+                    roundsCompleted.textContent = currentRound || '1';
+                    debateDuration.textContent = '0:00'; // Unknown duration
+                    
+                    // Hide rematch button (no opponent to rematch)
+                    if (rematchBtn) {
+                        rematchBtn.style.display = 'none';
+                    }
+                    
+                    trackEvent('Opponent Disconnected', {
+                        'Round': currentRound || 1,
+                        'Had Recording': recordedChunks.length > 0
+                    });
                 });
 
                 // Spectator joined - send them our stream
@@ -3298,6 +3314,7 @@
             findBtn.click();
         });
 
+        /* REMOVED - Share button
         shareDebateBtn.addEventListener('click', () => {
             // Create share menu
             const shareMenu = document.createElement('div');
@@ -3379,7 +3396,8 @@
             `;
             
             document.body.appendChild(shareMenu);
-        });
+        }); 
+        END REMOVED */
 
         function endDebateCleanup() {
             if (timerInterval) clearInterval(timerInterval);
@@ -3464,7 +3482,7 @@
             findBtn.disabled = false;
             nextOpponentBtn.disabled = true;
             nextOpponentBtn.innerHTML = '<span>⏭️ Next Opponent</span>';
-            shareDebateBtn.disabled = true;
+            // shareDebateBtn.disabled = true; // REMOVED
             
             currentDebate = null;
             debateStartTime = null;
@@ -3606,122 +3624,106 @@
         const shareInstagramBtn = document.getElementById('shareInstagramBtn');
         const copyLinkBtn = document.getElementById('copyLinkBtn');
 
-        shareTwitterBtn.addEventListener('click', () => {
+        // Social Share Handlers - Share video directly to apps
+        async function shareVideoToSocial(platform) {
             trackEvent('Social Share Clicked', {
-                'Platform': 'Twitter',
+                'Platform': platform,
                 'Rounds': roundsCompleted.textContent,
                 'Device': isMobile ? 'Mobile' : 'Desktop'
             });
             
-            const rounds = roundsCompleted.textContent;
-            const duration = debateDuration.textContent;
-            const text = `I just debated ${rounds} rounds on Hot Take! 🎤⚡ Think you can beat me? `;
-            const url = window.location.origin;
+            if (recordedChunks.length === 0) {
+                alert('Please wait for the debate recording to finish, then try again!');
+                return;
+            }
             
-            if (isMobile) {
-                // Mobile: Try to open Twitter app, fallback to web
-                const twitterAppUrl = `twitter://post?message=${encodeURIComponent(text + ' ' + url)}`;
-                const twitterWebUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+            // Create video blob
+            const mimeType = recordedChunks[0].type;
+            const finalMimeType = mimeType.includes('mp4') || mimeType.includes('h264') ? 'video/mp4' : 'video/webm';
+            const blob = new Blob(recordedChunks, { type: finalMimeType });
+            const extension = finalMimeType === 'video/mp4' ? 'mp4' : 'webm';
+            const timestamp = new Date().toISOString().slice(0,10);
+            const filename = `hot-take-debate-${timestamp}.${extension}`;
+            
+            // Try Web Share API with video file (works on mobile!)
+            if (navigator.share && navigator.canShare) {
+                try {
+                    const file = new File([blob], filename, { type: finalMimeType });
+                    
+                    if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                            files: [file],
+                            title: 'My Hot Take Debate',
+                            text: `Check out my debate on Hot Take! 🎤⚡ #HotTake`
+                        });
+                        
+                        console.log(`✅ Video shared to ${platform} successfully!`);
+                        return;
+                    }
+                } catch (shareErr) {
+                    console.warn('Native share failed:', shareErr);
+                    // Fall through to platform-specific handling
+                }
+            }
+            
+            // Fallback: Download video first, then open app
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            // Then open the app
+            setTimeout(() => {
+                let appUrl, webUrl, message;
                 
-                window.location.href = twitterAppUrl;
-                setTimeout(() => {
-                    window.open(twitterWebUrl, '_blank');
-                }, 500);
-            } else {
-                // Desktop: Open website
-                const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
-                window.open(twitterUrl, '_blank', 'width=550,height=420');
-            }
-        });
-
-        shareFacebookBtn.addEventListener('click', () => {
-            trackEvent('Social Share Clicked', {
-                'Platform': 'Facebook',
-                'Rounds': roundsCompleted.textContent,
-                'Device': isMobile ? 'Mobile' : 'Desktop'
-            });
-            
-            const url = window.location.origin;
-            
-            if (isMobile) {
-                // Mobile: Try to open Facebook app, fallback to web
-                const fbAppUrl = `fb://facewebmodal/f?href=${encodeURIComponent(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`)}`;
-                const fbWebUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+                switch(platform) {
+                    case 'TikTok':
+                        appUrl = 'tiktok://';
+                        webUrl = 'https://www.tiktok.com/upload';
+                        message = '📱 Video downloaded! Opening TikTok...\n\n1. Tap + to create\n2. Upload your video\n3. Add #HotTake hashtag!';
+                        break;
+                    case 'Instagram':
+                        appUrl = 'instagram://';
+                        webUrl = 'https://www.instagram.com';
+                        message = '📸 Video downloaded! Opening Instagram...\n\n1. Create Reel or Story\n2. Upload your video\n3. Add #HotTake hashtag!';
+                        break;
+                    case 'YouTube':
+                        appUrl = 'youtube://';
+                        webUrl = 'https://www.youtube.com/upload';
+                        message = '📺 Video downloaded! Opening YouTube...\n\n1. Tap + to upload\n2. Select your video\n3. Add #HotTake in description!';
+                        break;
+                    case 'Twitter':
+                        appUrl = 'twitter://post';
+                        webUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent('Check out my Hot Take debate! 🎤⚡')}`;
+                        message = '🐦 Video downloaded! Opening Twitter...\n\nNote: Upload video in your tweet!';
+                        break;
+                    case 'Facebook':
+                        appUrl = 'fb://';
+                        webUrl = 'https://www.facebook.com';
+                        message = '📘 Video downloaded! Opening Facebook...\n\nCreate a post and upload your video!';
+                        break;
+                }
                 
-                window.location.href = fbAppUrl;
-                setTimeout(() => {
-                    window.open(fbWebUrl, '_blank');
-                }, 500);
-            } else {
-                // Desktop: Open website
-                const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
-                window.open(facebookUrl, '_blank', 'width=550,height=420');
-            }
-        });
+                if (isMobile) {
+                    alert(message);
+                    window.location.href = appUrl;
+                    setTimeout(() => {
+                        window.open(webUrl, '_blank');
+                    }, 1000);
+                } else {
+                    alert(message.replace('Opening', 'Please open'));
+                    window.open(webUrl, '_blank');
+                }
+            }, 500);
+        }
         
-        shareYouTubeBtn.addEventListener('click', () => {
-            trackEvent('Social Share Clicked', {
-                'Platform': 'YouTube',
-                'Device': isMobile ? 'Mobile' : 'Desktop'
-            });
-            
-            if (isMobile) {
-                // Mobile: Prompt to download, then offer to open YouTube app
-                alert('📺 Share to YouTube:\n\n1. Click "Download Debate" first\n2. We\'ll open the YouTube app for you\n3. Tap + to upload your video\n4. Add #HotTake in description!');
-                setTimeout(() => {
-                    // Try to open YouTube app
-                    window.location.href = 'youtube://';
-                }, 1000);
-            } else {
-                // Desktop: Open YouTube upload page
-                alert('🎥 Upload to YouTube:\n\n1. Click "Download Debate" to save your video\n2. We\'ll open YouTube upload page\n3. Upload your video file\n4. Add #HotTake in the description!');
-                setTimeout(() => {
-                    window.open('https://www.youtube.com/upload', '_blank');
-                }, 1000);
-            }
-        });
-        
-        shareTikTokBtn.addEventListener('click', () => {
-            trackEvent('Social Share Clicked', {
-                'Platform': 'TikTok',
-                'Device': isMobile ? 'Mobile' : 'Desktop'
-            });
-            
-            if (isMobile) {
-                // Mobile: Try to open TikTok app
-                alert('📱 Share to TikTok:\n\n1. Click "Download Debate" first\n2. We\'ll open TikTok for you\n3. Tap + to create\n4. Upload your video\n5. Add #HotTake hashtag!');
-                setTimeout(() => {
-                    window.location.href = 'tiktok://';
-                }, 1000);
-            } else {
-                // Desktop: Open TikTok web
-                alert('📱 Share to TikTok:\n\n1. Click "Download Debate" to save your video\n2. Open tiktok.com on your phone\n3. Upload your video\n4. Add #HotTake hashtag!');
-                setTimeout(() => {
-                    window.open('https://www.tiktok.com/upload', '_blank');
-                }, 1000);
-            }
-        });
-        
-        shareInstagramBtn.addEventListener('click', () => {
-            trackEvent('Social Share Clicked', {
-                'Platform': 'Instagram',
-                'Device': isMobile ? 'Mobile' : 'Desktop'
-            });
-            
-            if (isMobile) {
-                // Mobile: Try to open Instagram app
-                alert('📸 Share to Instagram:\n\n1. Click "Download Debate" first\n2. We\'ll open Instagram for you\n3. Create Reel or Story\n4. Upload your video\n5. Add #HotTake hashtag!');
-                setTimeout(() => {
-                    window.location.href = 'instagram://';
-                }, 1000);
-            } else {
-                // Desktop: Open Instagram web
-                alert('📸 Share to Instagram:\n\n1. Download your debate video first\n2. Open Instagram on your phone\n3. Create new Reel or Story\n4. Upload your video\n5. Add #HotTake hashtag!');
-                setTimeout(() => {
-                    window.open('https://www.instagram.com', '_blank');
-                }, 1000);
-            }
-        });
+        shareTwitterBtn.addEventListener('click', () => shareVideoToSocial('Twitter'));
+        shareFacebookBtn.addEventListener('click', () => shareVideoToSocial('Facebook'));
+        shareYouTubeBtn.addEventListener('click', () => shareVideoToSocial('YouTube'));
+        shareTikTokBtn.addEventListener('click', () => shareVideoToSocial('TikTok'));
+        shareInstagramBtn.addEventListener('click', () => shareVideoToSocial('Instagram'));
 
         copyLinkBtn.addEventListener('click', async () => {
             const url = window.location.origin;
