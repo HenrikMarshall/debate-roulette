@@ -3645,28 +3645,92 @@
             const timestamp = new Date().toISOString().slice(0,10);
             const filename = `hot-take-debate-${timestamp}.${extension}`;
             
-            // Try Web Share API with video file (works on mobile!)
-            if (navigator.share && navigator.canShare) {
-                try {
-                    const file = new File([blob], filename, { type: finalMimeType });
-                    
-                    if (navigator.canShare({ files: [file] })) {
-                        await navigator.share({
-                            files: [file],
-                            title: 'My Hot Take Debate',
-                            text: `Check out my debate on Hot Take! 🎤⚡ #HotTake`
-                        });
+            // MOBILE: Save to camera roll then open app
+            if (isMobile) {
+                console.log(`📱 Mobile share for ${platform}`);
+                
+                // Use Web Share API if available (best for generic sharing)
+                if (navigator.share && navigator.canShare && (platform === 'Twitter' || platform === 'Facebook')) {
+                    try {
+                        const file = new File([blob], filename, { type: finalMimeType });
                         
-                        console.log(`✅ Video shared to ${platform} successfully!`);
-                        return;
+                        if (navigator.canShare({ files: [file] })) {
+                            await navigator.share({
+                                files: [file],
+                                title: 'My Hot Take Debate',
+                                text: `Check out my debate on Hot Take! 🎤⚡ #HotTake`
+                            });
+                            
+                            console.log(`✅ Video shared via Web Share API`);
+                            return;
+                        }
+                    } catch (shareErr) {
+                        console.warn('Web Share API failed:', shareErr);
+                        // Fall through
                     }
-                } catch (shareErr) {
-                    console.warn('Native share failed:', shareErr);
-                    // Fall through to platform-specific handling
                 }
+                
+                // For Instagram, TikTok, YouTube: Save to camera roll first
+                // This is the most reliable method for these apps
+                
+                // Step 1: Save video to device
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                console.log(`✅ Video saved to device: ${filename}`);
+                
+                // Step 2: Show instructions and open app
+                let appUrl, message;
+                
+                switch(platform) {
+                    case 'TikTok':
+                        appUrl = 'tiktok://';
+                        message = '✅ Video saved to your Photos!\n\n1. Opening TikTok now...\n2. Tap + to create\n3. Select the video from Photos\n4. Add #HotTake hashtag!';
+                        break;
+                        
+                    case 'Instagram':
+                        appUrl = 'instagram://camera';
+                        message = '✅ Video saved to your Photos!\n\n1. Opening Instagram now...\n2. Tap + to create Reel\n3. Select the video from Photos\n4. Add #HotTake hashtag!';
+                        break;
+                        
+                    case 'YouTube':
+                        appUrl = 'youtube://';
+                        message = '✅ Video saved to your Photos!\n\n1. Opening YouTube now...\n2. Tap + to upload\n3. Select the video from Photos\n4. Add #HotTake in description!';
+                        break;
+                        
+                    case 'Twitter':
+                        appUrl = 'twitter://post';
+                        message = '✅ Video saved!\n\n1. Opening Twitter now...\n2. Create a tweet\n3. Attach the video\n4. Add #HotTake!';
+                        break;
+                        
+                    case 'Facebook':
+                        appUrl = 'fb://';
+                        message = '✅ Video saved!\n\n1. Opening Facebook now...\n2. Create a post\n3. Attach the video\n4. Share!';
+                        break;
+                }
+                
+                // Show message
+                alert(message);
+                
+                // Open app after short delay
+                setTimeout(() => {
+                    console.log(`🚀 Opening ${platform} app: ${appUrl}`);
+                    window.location.href = appUrl;
+                }, 500);
+                
+                return;
             }
             
-            // Fallback: Download video first, then open app
+            // DESKTOP: Download and open website
+            console.log(`💻 Desktop share for ${platform}`);
+            
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -3674,48 +3738,34 @@
             a.click();
             URL.revokeObjectURL(url);
             
-            // Then open the app
+            let webUrl, message;
+            
+            switch(platform) {
+                case 'TikTok':
+                    webUrl = 'https://www.tiktok.com/upload';
+                    message = '✅ Video downloaded!\n\nOpening TikTok upload page...';
+                    break;
+                case 'Instagram':
+                    webUrl = 'https://www.instagram.com';
+                    message = '✅ Video downloaded!\n\nNote: Upload from your phone for Reels';
+                    break;
+                case 'YouTube':
+                    webUrl = 'https://www.youtube.com/upload';
+                    message = '✅ Video downloaded!\n\nOpening YouTube upload...';
+                    break;
+                case 'Twitter':
+                    webUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent('Check out my Hot Take debate! 🎤⚡ #HotTake')}`;
+                    message = '✅ Video downloaded!\n\nOpening Twitter...';
+                    break;
+                case 'Facebook':
+                    webUrl = 'https://www.facebook.com';
+                    message = '✅ Video downloaded!\n\nOpening Facebook...';
+                    break;
+            }
+            
+            alert(message);
             setTimeout(() => {
-                let appUrl, webUrl, message;
-                
-                switch(platform) {
-                    case 'TikTok':
-                        appUrl = 'tiktok://';
-                        webUrl = 'https://www.tiktok.com/upload';
-                        message = '📱 Video downloaded! Opening TikTok...\n\n1. Tap + to create\n2. Upload your video\n3. Add #HotTake hashtag!';
-                        break;
-                    case 'Instagram':
-                        appUrl = 'instagram://';
-                        webUrl = 'https://www.instagram.com';
-                        message = '📸 Video downloaded! Opening Instagram...\n\n1. Create Reel or Story\n2. Upload your video\n3. Add #HotTake hashtag!';
-                        break;
-                    case 'YouTube':
-                        appUrl = 'youtube://';
-                        webUrl = 'https://www.youtube.com/upload';
-                        message = '📺 Video downloaded! Opening YouTube...\n\n1. Tap + to upload\n2. Select your video\n3. Add #HotTake in description!';
-                        break;
-                    case 'Twitter':
-                        appUrl = 'twitter://post';
-                        webUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent('Check out my Hot Take debate! 🎤⚡')}`;
-                        message = '🐦 Video downloaded! Opening Twitter...\n\nNote: Upload video in your tweet!';
-                        break;
-                    case 'Facebook':
-                        appUrl = 'fb://';
-                        webUrl = 'https://www.facebook.com';
-                        message = '📘 Video downloaded! Opening Facebook...\n\nCreate a post and upload your video!';
-                        break;
-                }
-                
-                if (isMobile) {
-                    alert(message);
-                    window.location.href = appUrl;
-                    setTimeout(() => {
-                        window.open(webUrl, '_blank');
-                    }, 1000);
-                } else {
-                    alert(message.replace('Opening', 'Please open'));
-                    window.open(webUrl, '_blank');
-                }
+                window.open(webUrl, '_blank');
             }, 500);
         }
         
