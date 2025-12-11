@@ -1345,6 +1345,24 @@ io.on('connection', (socket) => {
         });
     });
 
+    // Cancel matchmaking
+    socket.on('cancel-matchmaking', () => {
+        console.log(`${socket.id} cancelled matchmaking`);
+        
+        // Remove from regular queue
+        waitingUsers.delete(socket.id);
+        
+        // Remove from premium queues
+        for (const [category, queue] of premiumQueues.entries()) {
+            queue.delete(socket.id);
+            if (queue.size === 0) {
+                premiumQueues.delete(category);
+            }
+        }
+        
+        console.log(`✅ ${socket.id} removed from all matchmaking queues`);
+    });
+
     // Disconnect handling
     socket.on('disconnect', () => {
         console.log(`User disconnected: ${socket.id}`);

@@ -1285,6 +1285,7 @@
 
             .debate-end-buttons {
                 gap: 10px;
+                margin-top: 20px; /* Space after social buttons on mobile */
             }
 
             .debate-end-btn {
@@ -1789,6 +1790,9 @@
                 <div class="loading-spinner"></div>
                 <div class="loading-text" id="loadingText">Finding opponent...</div>
                 <div class="loading-subtext" id="loadingSubtext">Matching you with another debater</div>
+                <button class="debate-end-btn secondary" id="cancelMatchmakingBtn" style="margin-top: 30px;">
+                    ← Back
+                </button>
             </div>
         </div>
 
@@ -1855,12 +1859,6 @@
                                 <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
                             </svg>
                             Instagram
-                        </button>
-                        <button class="social-btn copy" id="copyLinkBtn" style="background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2);">
-                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-                            </svg>
-                            Copy Link
                         </button>
                     </div>
                 </div>
@@ -2434,6 +2432,31 @@
         const loadingOverlay = document.getElementById('loadingOverlay');
         const loadingText = document.getElementById('loadingText');
         const loadingSubtext = document.getElementById('loadingSubtext');
+        const cancelMatchmakingBtn = document.getElementById('cancelMatchmakingBtn');
+        
+        // Cancel matchmaking and go back
+        cancelMatchmakingBtn.addEventListener('click', () => {
+            console.log('🔙 Cancel matchmaking clicked');
+            
+            // Hide loading overlay
+            loadingOverlay.classList.remove('active');
+            
+            // Stop local stream if active
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+                localVideo.srcObject = null;
+            }
+            
+            // Cancel matchmaking on backend
+            socket.emit('cancel-matchmaking');
+            
+            trackEvent('Matchmaking Cancelled', {
+                'Was Finding': loadingText.textContent
+            });
+            
+            console.log('✅ Matchmaking cancelled, back to home screen');
+        });
         
         // Debate end modal
         const debateEndModal = document.getElementById('debateEndModal');
@@ -3622,7 +3645,7 @@
         const shareYouTubeBtn = document.getElementById('shareYouTubeBtn');
         const shareTikTokBtn = document.getElementById('shareTikTokBtn');
         const shareInstagramBtn = document.getElementById('shareInstagramBtn');
-        const copyLinkBtn = document.getElementById('copyLinkBtn');
+        // const copyLinkBtn = document.getElementById('copyLinkBtn'); // REMOVED
 
         // Social Share Handlers - Share video directly to apps
         async function shareVideoToSocial(platform) {
@@ -3775,6 +3798,7 @@
         shareTikTokBtn.addEventListener('click', () => shareVideoToSocial('TikTok'));
         shareInstagramBtn.addEventListener('click', () => shareVideoToSocial('Instagram'));
 
+        /* REMOVED - Copy Link Button
         copyLinkBtn.addEventListener('click', async () => {
             const url = window.location.origin;
             try {
@@ -3795,6 +3819,8 @@
                 alert('Failed to copy link');
             }
         });
+        END REMOVED */
+
 
         // Download Debate functionality (in modal only)
         downloadDebateModalBtn.addEventListener('click', async () => {
