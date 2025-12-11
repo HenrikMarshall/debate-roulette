@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Us - Debatr</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #ff3366;
+            --secondary: #6366ff;
+            --accent: #00ff88;
+            --bg: #0a0a0f;
+            --surface: #1a1a24;
+            --text: #ffffff;
+            --text-dim: #a0a0b0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Mono', monospace;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .logo {
+            font-family: 'Syne', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+        }
+
+        .subtitle {
+            color: var(--text-dim);
+            font-size: 1.1rem;
+        }
+
+        .contact-card {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 40px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .contact-section {
+            margin-bottom: 40px;
+        }
+
+        .contact-section:last-child {
+            margin-bottom: 0;
+        }
+
+        h2 {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.8rem;
+            color: var(--accent);
+            margin-bottom: 15px;
+        }
+
+        .contact-method {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .contact-method:last-child {
+            margin-bottom: 0;
+        }
+
+        .contact-icon {
+            font-size: 2rem;
+        }
+
+        .contact-info {
+            flex: 1;
+        }
+
+        .contact-label {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .contact-value {
+            font-size: 1.1rem;
+        }
+
+        .contact-value a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .contact-value a:hover {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 40px;
+            padding: 15px 30px;
+            background: var(--surface);
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 700;
+            transition: all 0.3s;
+        }
+
+        .back-link:hover {
+            background: var(--accent);
+            color: var(--bg);
+            transform: translateY(-2px);
+        }
+
+        .highlight {
+            background: rgba(0, 255, 136, 0.1);
+            border-left: 4px solid var(--accent);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 40px 20px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .logo {
+                font-size: 2rem;
+            }
+
+            .contact-card {
+                padding: 30px 20px;
+            }
+
+            .contact-method {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">DEBATR</div>
+            <h1>Contact Us</h1>
+            <p class="subtitle">We'd love to hear from you</p>
+        </header>
+
+        <div class="contact-card">
+            <div class="contact-section">
+                <h2>📧 General Inquiries</h2>
+                <div class="contact-method">
+                    <div class="contact-icon">✉️</div>
+                    <div class="contact-info">
+                        <div class="contact-label">Email us at:</div>
+                        <div class="contact-value">
+                            <a href="mailto:hello@debatr.io">hello@debatr.io</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="contact-section">
+                <h2>🛠️ Support</h2>
+                <div class="contact-method">
+                    <div class="contact-icon">💬</div>
+                    <div class="contact-info">
+                        <div class="contact-label">Need help? Email:</div>
+                        <div class="contact-value">
+                            <a href="mailto:support@debatr.io">support@debatr.io</a>
+                        </div>
+                    </div>
+                </div>
+                <p style="color: var(--text-dim); margin-top: 15px; padding-left: 60px;">
+                    We typically respond within 24-48 hours
+                </p>
+            </div>
+
+            <div class="contact-section">
+                <h2>🚨 Report Issues</h2>
+                <div class="contact-method">
+                    <div class="contact-icon">⚠️</div>
+                    <div class="contact-info">
+                        <div class="contact-label">Report abuse or violations:</div>
+                        <div class="contact-value">
+                            <a href="mailto:abuse@debatr.io">abuse@debatr.io</a>
+                        </div>
+                    </div>
+                </div>
+                <p style="color: var(--text-dim); margin-top: 15px; padding-left: 60px;">
+                    Include debate ID or opponent username if possible
+                </p>
+            </div>
+
+            <div class="contact-section">
+                <h2>📰 Press & Media</h2>
+                <div class="contact-method">
+                    <div class="contact-icon">📸</div>
+                    <div class="contact-info">
+                        <div class="contact-label">Media inquiries:</div>
+                        <div class="contact-value">
+                            <a href="mailto:press@debatr.io">press@debatr.io</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="contact-section">
+                <h2>💼 Business & Partnerships</h2>
+                <div class="contact-method">
+                    <div class="contact-icon">🤝</div>
+                    <div class="contact-info">
+                        <div class="contact-label">Interested in partnering?</div>
+                        <div class="contact-value">
+                            <a href="mailto:partnerships@debatr.io">partnerships@debatr.io</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="highlight">
+            <strong>📍 Location:</strong> Based in Montreal, Canada<br>
+            <strong>🕐 Response Time:</strong> 24-48 hours for most inquiries<br>
+            <strong>🌐 Website:</strong> <a href="https://debatr.io" style="color: var(--accent);">debatr.io</a>
+        </div>
+
+        <div style="text-align: center;">
+            <a href="/" class="back-link">← Back to Home</a>
+        </div>
+
+        <div style="margin-top: 60px; padding-top: 40px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; color: var(--text-dim);">
+            <p>Building infrastructure for civil discourse 🎤</p>
+            <p style="margin-top: 10px; font-size: 0.9rem;">
+                <a href="/terms.html" style="color: var(--text-dim); margin: 0 10px;">Terms</a>
+                <a href="/privacy.html" style="color: var(--text-dim); margin: 0 10px;">Privacy</a>
+                <a href="/guidelines.html" style="color: var(--text-dim); margin: 0 10px;">Guidelines</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

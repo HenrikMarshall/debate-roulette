@@ -288,9 +288,21 @@
 
         .steps {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(4, 1fr);
             gap: 40px;
             margin-top: 60px;
+        }
+        
+        @media (max-width: 1024px) {
+            .steps {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 640px) {
+            .steps {
+                grid-template-columns: 1fr;
+            }
         }
 
         .step {
@@ -552,11 +564,11 @@
     <!-- Hero Section -->
     <section class="hero">
         <h1>
-            <span class="hero-gradient">Share Your Debatr</span>
+            <span class="hero-gradient">Civil Discourse, One Debate at a Time</span>
         </h1>
         <p class="hero-subtitle">
-            Get matched with strangers for 30-second video debates on controversial topics. 
-            30 seconds to defend your Debatr.
+            Face-to-face video debates with strangers on controversial topics. 
+            30 seconds each side. Break out of your echo chamber.
         </p>
         
         <div class="cta-buttons">
@@ -695,8 +707,8 @@
 
     <!-- CTA Section -->
     <section class="cta-section">
-        <h2>Ready to Tug Some Words?</h2>
-        <p>Join thousands arguing about what really matters (or doesn't)</p>
+        <h2>Ready to Challenge Your Views?</h2>
+        <p>Practice civil discourse with real people who think differently</p>
         <a href="/login" class="btn btn-primary" style="background: white; color: var(--bg);">🎤 Start Your First Debate</a>
     </section>
 
@@ -743,14 +755,14 @@
             <a href="/terms.html">Terms of Service</a>
             <a href="/privacy.html">Privacy Policy</a>
             <a href="/guidelines.html">Community Guidelines</a>
-            <a href="mailto:hello@debatr.io">Contact</a>
+            <a href="/contact.html">Contact</a>
         </div>
         <p>&copy; 2024 Debatr. All rights reserved.</p>
         <p style="margin-top: 10px; font-size: 0.8rem;">Built with 🔥 for people who love to argue</p>
     </footer>
 
     <!-- Simple Analytics (add your tracking code) -->
-    <script data-cfasync="false" src="/cdn-cgi/scrip
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script data-cfasync="false" src="/cdn-cgi/scrip
     <script>
         // Migrate old localStorage key
         const oldUser = localStorage.getItem("tugOWordUser");
@@ -765,11 +777,4 @@
             document.getElementById("profileBtn").style.display = "block";
             
             // Make "Start Debating" go directly to /debate if logged in
-            const startBtn = document.getElementById("startDebatingBtn");
-            if (startBtn) {
-                startBtn.href = "/debate";
-            }
-        }
-    </script>
-</body>
-</html>
+            const startBtn = document.getElementById(
