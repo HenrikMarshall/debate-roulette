@@ -3165,7 +3165,51 @@
                 loadingText.textContent = 'Finding opponent...';
                 loadingSubtext.textContent = 'Matching you with another debater';
 
-                socket.emit('find-opponent');
+                // Use REST API polling instead of WebSocket
+                const userId = 'web_' + Math.random().toString(36).substr(2, 9);
+                const username = 'Web User ' + Math.floor(Math.random() * 1000);
+                
+                let matchCheckInterval;
+                
+                async function checkForMatch() {
+                    try {
+                        const response = await fetch('/api/debates/find-opponent', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ userId, username })
+                        });
+                        
+                        const data = await response.json();
+                        console.log('📥 Match response:', data);
+                        
+                        if (data.id && data.topic) {
+                            clearInterval(matchCheckInterval);
+                            handleMatchFromAPI(data);
+                        } else {
+                            console.log('⏳ Still waiting...');
+                        }
+                    } catch (error) {
+                        console.error('❌ Match check error:', error);
+                    }
+                }
+                
+                function handleMatchFromAPI(debate) {
+                    console.log('🎉 MATCHED!', debate);
+                    clearTimeout(findOpponentTimeout);
+                    loadingOverlay.classList.remove('active');
+                    const topicText = debate.topic?.text || debate.topic || 'Unknown topic';
+                    setupScreen.style.display = 'none';
+                    debateScreen.style.display = 'flex';
+                    document.getElementById('debate-topic').textContent = topicText;
+                    window.currentDebateId = debate.id;
+                    startDebateTimer(30, 1);
+                    if (typeof mixpanel !== 'undefined') {
+                        mixpanel.track('Debate Matched', { 'debate_id': debate.id, 'topic': topicText });
+                    }
+                }
+                
+                checkForMatch();
+                matchCheckInterval = setInterval(checkForMatch, 2000);
                 findBtn.disabled = true;
                 
                 // Set 30-second timeout
