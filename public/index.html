@@ -4975,11 +4975,60 @@
                     // Enable find button
                     findBtn.disabled = false;
 
-                    // Send to backend using premium matchmaking
-                    socket.emit('find-opponent-premium', {
-                        category: selectedCategory === 'Random' ? null : selectedCategory,
-                        isPremium: isPremiumUser
-                    });
+                    // Use REST API polling for premium matchmaking too
+                    const userId = 'web_premium_' + Math.random().toString(36).substr(2, 9);
+                    const username = 'Premium User ' + Math.floor(Math.random() * 1000);
+                    
+                    let matchCheckInterval;
+                    
+                    async function checkForMatch() {
+                        try {
+                            const response = await fetch('/api/debates/find-opponent', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ 
+                                    userId, 
+                                    username,
+                                    category: selectedCategory === 'Random' ? null : selectedCategory,
+                                    isPremium: isPremiumUser
+                                })
+                            });
+                            
+                            const data = await response.json();
+                            console.log('📥 Premium match response:', data);
+                            
+                            if (data.id && data.topic) {
+                                clearInterval(matchCheckInterval);
+                                handlePremiumMatch(data);
+                            } else {
+                                console.log('⏳ Still waiting for premium match...');
+                            }
+                        } catch (error) {
+                            console.error('❌ Premium match check error:', error);
+                        }
+                    }
+                    
+                    function handlePremiumMatch(debate) {
+                        console.log('🎉 PREMIUM MATCHED!', debate);
+                        loadingOverlay.classList.remove('active');
+                        const topicText = debate.topic?.text || debate.topic || 'Unknown topic';
+                        setupScreen.style.display = 'none';
+                        debateScreen.style.display = 'flex';
+                        document.getElementById('debate-topic').textContent = topicText;
+                        window.currentDebateId = debate.id;
+                        startDebateTimer(30, 1);
+                        if (typeof mixpanel !== 'undefined') {
+                            mixpanel.track('Debate Matched', { 
+                                'debate_id': debate.id, 
+                                'topic': topicText,
+                                'is_premium': true,
+                                'category': selectedCategory
+                            });
+                        }
+                    }
+                    
+                    checkForMatch();
+                    matchCheckInterval = setInterval(checkForMatch, 2000);
                     
                     loadingText.textContent = selectedCategory === 'Random' ? 'Finding opponent...' : `Finding ${selectedCategory} opponent...`;
                     loadingSubtext.textContent = selectedCategory === 'Random' ? 'Matching with anyone available' : `Looking for someone interested in ${selectedCategory}`;
