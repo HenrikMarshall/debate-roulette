@@ -19,6 +19,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
+// State management for WebSocket connections (MUST be declared before using them)
+const waitingUsers = new Set();
+const activeDebates = new Map();
+const userSockets = new Map();
+
 // NEW: API Routes for iOS/mobile apps
 app.use('/api', apiRoutes);
 
@@ -29,16 +34,6 @@ apiRoutes.setDependencies({
     userSockets,
     io
 });
-
-// State management for WebSocket connections
-const waitingUsers = new Set();
-const activeDebates = new Map();
-const userSockets = new Map();
-
-// Export for API routes to use the same queue
-module.exports.waitingUsers = waitingUsers;
-module.exports.activeDebates = activeDebates;
-module.exports.userSockets = userSockets;
 
 // Debate topics
 const topics = [
