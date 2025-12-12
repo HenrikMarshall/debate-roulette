@@ -335,8 +335,8 @@ router.get('/health', (req, res) => {
         timestamp: new Date(),
         stats: {
             activeUsers: activeUsers.size,
-            matchQueue: matchQueue.size,
-            activeDebates: activeDebates.size
+            apiWaitingQueue: apiWaitingQueue.size,
+            activeDebates: activeDebates ? activeDebates.size : 0
         }
     });
 });
