@@ -17,6 +17,7 @@ router.setDependencies = (deps) => {
 
 // In-memory storage for API-only users
 const activeUsers = new Map(); // userId -> user data
+const apiWaitingQueue = new Map(); // userId -> { user, timestamp, res }
 
 // Debate topics (same as your existing topics array)
 const topics = [
@@ -98,6 +99,8 @@ router.post('/debates/find-opponent', (req, res) => {
     const userId = req.body.userId || generateId('user');
     const username = req.body.username || 'Anonymous';
     
+    console.log(`🔍 API: ${username} (${userId}) looking for opponent...`);
+    
     // Create user entry
     const user = {
         id: userId,
@@ -105,21 +108,61 @@ router.post('/debates/find-opponent', (req, res) => {
         joinedAt: new Date()
     };
     
-    // Check if someone is waiting in the WebSocket queue
+    // FIRST: Check if another API user is waiting
+    if (apiWaitingQueue.size > 0) {
+        const waitingUserId = Array.from(apiWaitingQueue.keys())[0];
+        
+        // Don't match with yourself
+        if (waitingUserId !== userId) {
+            const waitingUser = apiWaitingQueue.get(waitingUserId);
+            apiWaitingQueue.delete(waitingUserId);
+            
+            // Create debate between two API users
+            const debateId = generateId('debate');
+            const topic = getRandomTopic();
+            
+            const user1Side = Math.random() > 0.5 ? 'for' : 'against';
+            const user2Side = user1Side === 'for' ? 'against' : 'for';
+
+            const debate = {
+                id: debateId,
+                topic: topic,
+                participants: [
+                    {
+                        id: waitingUserId,
+                        username: waitingUser.user.username,
+                        isSpeaker1: true
+                    },
+                    {
+                        id: userId,
+                        username: username,
+                        isSpeaker1: false
+                    }
+                ],
+                startedAt: new Date(),
+                phase: 'speaker1',
+                timeRemaining: 30
+            };
+            
+            console.log(`🎉 API-API match! ${waitingUser.user.username} + ${username}`);
+            
+            // Respond to both users
+            waitingUser.res.json(debate);
+            return res.json(debate);
+        }
+    }
+    
+    // SECOND: Check if someone is waiting in the WebSocket queue
     if (waitingUsers && waitingUsers.size > 0) {
-        // Get the first waiting user from WebSocket
         const waitingSocketId = Array.from(waitingUsers)[0];
         const opponent = userSockets ? userSockets.get(waitingSocketId) : null;
 
         if (opponent && io) {
-            // Remove from WebSocket queue
             waitingUsers.delete(waitingSocketId);
             
-            // Create debate
             const debateId = generateId('debate');
             const topic = getRandomTopic();
             
-            // Randomly assign sides
             const user1Side = Math.random() > 0.5 ? 'for' : 'against';
             const user2Side = user1Side === 'for' ? 'against' : 'for';
 
@@ -155,12 +198,9 @@ router.post('/debates/find-opponent', (req, res) => {
             };
 
             activeDebates.set(debateId, debate);
-
-            // Update opponent data
             opponent.currentDebate = debateId;
             opponent.side = user1Side;
 
-            // Notify WebSocket user
             io.to(waitingSocketId).emit('debate-matched', {
                 debateId: debateId,
                 topic: topic.text,
@@ -170,22 +210,29 @@ router.post('/debates/find-opponent', (req, res) => {
             });
 
             console.log(`🎭 Cross-platform match! WebSocket user ${opponent.username} + API user ${username}`);
-            
-            // Return match to API user
             return res.json(debate);
         }
     }
     
-    // No WebSocket users waiting, add to our own tracking
-    // (WebSocket users will see this API user in their queue)
+    // NO ONE WAITING: Add this API user to the waiting queue
+    // Store the response object so we can reply when matched
+    apiWaitingQueue.set(userId, { user, res, timestamp: Date.now() });
     activeUsers.set(userId, user);
     
-    // Return waiting status
-    res.json({
-        status: 'waiting',
-        message: 'Searching for opponent...',
-        queuePosition: 1
-    });
+    console.log(`⏳ API: ${username} added to waiting queue (position ${apiWaitingQueue.size})`);
+    
+    // Don't send response yet - will respond when matched
+    // Set a timeout to respond with "waiting" if no match after 60 seconds
+    setTimeout(() => {
+        if (apiWaitingQueue.has(userId)) {
+            apiWaitingQueue.delete(userId);
+            res.json({
+                status: 'waiting',
+                message: 'Searching for opponent...',
+                queuePosition: 1
+            });
+        }
+    }, 60000);
 });
 
 // Get debate by ID
