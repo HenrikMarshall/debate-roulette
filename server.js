@@ -22,10 +22,23 @@ app.use(express.static('public'));
 // NEW: API Routes for iOS/mobile apps
 app.use('/api', apiRoutes);
 
+// Inject shared dependencies into API routes
+apiRoutes.setDependencies({
+    waitingUsers,
+    activeDebates,
+    userSockets,
+    io
+});
+
 // State management for WebSocket connections
 const waitingUsers = new Set();
 const activeDebates = new Map();
 const userSockets = new Map();
+
+// Export for API routes to use the same queue
+module.exports.waitingUsers = waitingUsers;
+module.exports.activeDebates = activeDebates;
+module.exports.userSockets = userSockets;
 
 // Debate topics
 const topics = [

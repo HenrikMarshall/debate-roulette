@@ -4,10 +4,19 @@
 const express = require('express');
 const router = express.Router();
 
-// In-memory storage (replace with database later)
+// Import shared queue from server (will be set by server.js)
+let waitingUsers, activeDebates, userSockets, io;
+
+// This will be called by server.js to inject dependencies
+router.setDependencies = (deps) => {
+    waitingUsers = deps.waitingUsers;
+    activeDebates = deps.activeDebates;
+    userSockets = deps.userSockets;
+    io = deps.io;
+};
+
+// In-memory storage for API-only users
 const activeUsers = new Map(); // userId -> user data
-const matchQueue = new Set(); // users waiting for match
-const activeDebates = new Map(); // debateId -> debate data
 
 // Debate topics (same as your existing topics array)
 const topics = [
@@ -96,55 +105,86 @@ router.post('/debates/find-opponent', (req, res) => {
         joinedAt: new Date()
     };
     
-    // Check if someone is waiting
-    if (matchQueue.size > 0) {
-        // Get the first waiting user
-        const waitingUserId = Array.from(matchQueue)[0];
-        const opponent = activeUsers.get(waitingUserId);
-        
-        if (opponent) {
-            // Remove from queue
-            matchQueue.delete(waitingUserId);
+    // Check if someone is waiting in the WebSocket queue
+    if (waitingUsers && waitingUsers.size > 0) {
+        // Get the first waiting user from WebSocket
+        const waitingSocketId = Array.from(waitingUsers)[0];
+        const opponent = userSockets ? userSockets.get(waitingSocketId) : null;
+
+        if (opponent && io) {
+            // Remove from WebSocket queue
+            waitingUsers.delete(waitingSocketId);
             
             // Create debate
             const debateId = generateId('debate');
             const topic = getRandomTopic();
             
+            // Randomly assign sides
+            const user1Side = Math.random() > 0.5 ? 'for' : 'against';
+            const user2Side = user1Side === 'for' ? 'against' : 'for';
+
             const debate = {
                 id: debateId,
+                topic: topic.text,
+                user1: {
+                    id: waitingSocketId,
+                    username: opponent.username || 'Web User',
+                    side: user1Side
+                },
+                user2: {
+                    id: userId,
+                    username: username,
+                    side: user2Side
+                },
+                currentSpeaker: waitingSocketId,
+                phase: 'speaker1',
+                startedAt: Date.now(),
+                spectators: new Set(),
                 participants: [
                     {
-                        id: opponent.id,
-                        username: opponent.username,
+                        id: waitingSocketId,
+                        username: opponent.username || 'Web User',
                         isSpeaker1: true
                     },
                     {
-                        id: user.id,
-                        username: user.username,
+                        id: userId,
+                        username: username,
                         isSpeaker1: false
                     }
-                ],
-                topic: topic,
-                startedAt: new Date(),
-                phase: 'speaker1',
-                timeRemaining: 30
+                ]
             };
-            
+
             activeDebates.set(debateId, debate);
+
+            // Update opponent data
+            opponent.currentDebate = debateId;
+            opponent.side = user1Side;
+
+            // Notify WebSocket user
+            io.to(waitingSocketId).emit('debate-matched', {
+                debateId: debateId,
+                topic: topic.text,
+                opponent: username,
+                yourSide: user1Side,
+                currentSpeaker: waitingSocketId
+            });
+
+            console.log(`🎭 Cross-platform match! WebSocket user ${opponent.username} + API user ${username}`);
             
+            // Return match to API user
             return res.json(debate);
         }
     }
     
-    // No one waiting, add to queue
+    // No WebSocket users waiting, add to our own tracking
+    // (WebSocket users will see this API user in their queue)
     activeUsers.set(userId, user);
-    matchQueue.add(userId);
     
     // Return waiting status
     res.json({
         status: 'waiting',
         message: 'Searching for opponent...',
-        queuePosition: matchQueue.size
+        queuePosition: 1
     });
 });
 
