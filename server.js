@@ -1,13 +1,12 @@
 const express = require('express');
 const http = require('http');
-const socketIO = require('socket.io');
-const path = require('path');
+const socketIo = require('socket.io');
 const cors = require('cors');
-const apiRoutes = require('./api-routes'); // NEW: API routes for iOS app
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIO(server, {
+const io = socketIo(server, {
     cors: {
         origin: "*",
         methods: ["GET", "POST"]
@@ -17,331 +16,294 @@ const io = socketIO(server, {
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// ============================================
+// ROUTES FIRST - BEFORE express.static()
+// ============================================
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'landing.html'));
+});
+
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+app.get('/debate', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/profile', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'profile.html'));
+});
+
+app.get('/data-deletion', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'data-deletion.html'));
+});
+
+// Static files AFTER routes (fallback)
 app.use(express.static('public'));
 
-// State management for WebSocket connections (MUST be declared before using them)
+// ============================================
+// STATE MANAGEMENT
+// ============================================
+
 const waitingUsers = new Set();
 const activeDebates = new Map();
 const userSockets = new Map();
 
-// NEW: API Routes for iOS/mobile apps
-app.use('/api', apiRoutes);
-
-// Inject shared dependencies into API routes
-apiRoutes.setDependencies({
-    waitingUsers,
-    activeDebates,
-    userSockets,
-    io
-});
-
-// Debate topics
-const topics = [
-    "Artificial Intelligence will do more harm than good for humanity",
-    "Social media should be regulated like tobacco products",
-    "Universal Basic Income is necessary for the future economy",
-    "Space exploration is a waste of resources",
-    "Cryptocurrency is the future of money",
+const DEBATE_TOPICS = [
+    "Pineapple belongs on pizza",
+    "Cats are better than dogs",
+    "Morning people are more productive than night owls",
+    "Social media does more harm than good",
     "Remote work is better than office work",
-    "College education is overrated",
-    "Animals should have legal rights",
-    "Nuclear energy is essential for fighting climate change",
-    "Video games cause violence",
-    "Privacy is more important than security",
-    "Homework should be banned in schools",
-    "Self-driving cars will make roads safer",
-    "Vegetarianism should be mandatory",
-    "Advertising to children should be illegal",
-    "Athletes are overpaid",
-    "Artificial meat is better than real meat",
-    "Democracy is the best form of government",
+    "Video games should be considered a sport",
+    "Money can buy happiness",
+    "Artificial intelligence will improve humanity",
     "Books are better than movies",
-    "Technology makes us more lonely",
+    "Coffee is overrated",
+    "Cryptocurrency is the future of money",
+    "School should start later in the day",
+    "Older music is better than modern music",
+    "Marvel is better than DC",
+    "iOS is superior to Android",
+    "Homework should be abolished",
+    "Fast food should be banned",
+    "Reality TV is a guilty pleasure worth defending",
+    "Texting is ruining communication",
+    "Everyone should learn to code",
+    "Aliens definitely exist",
+    "Time travel would be a disaster",
+    "Robots will take all our jobs",
+    "Vegetarianism is morally superior",
+    "College degrees are becoming worthless",
+    "Ads are ruining the internet",
+    "TikTok is rotting our brains",
+    "Superhero movies are overrated",
+    "Influencers aren't real jobs",
+    "Cancel culture has gone too far",
+    "Democracy is overrated",
+    "Capitalism is the best economic system",
     "Climate change is the biggest threat to humanity",
-    "Monarchy is an outdated form of government",
-    "Parents should be required to take parenting classes",
-    "The death penalty should be abolished worldwide",
-    "Zoos do more harm than good"
+    "Nuclear energy is the solution to climate change",
+    "Space exploration is a waste of money",
+    "Universal basic income would solve poverty",
+    "Standardized testing should be eliminated",
+    "College should be free for everyone",
+    "The death penalty is justified",
+    "Guns should be banned",
+    "Marijuana should be legal everywhere",
+    "Voting should be mandatory",
+    "The internet should be heavily regulated",
+    "Zoos are unethical",
+    "Hunting is morally wrong",
+    "Having children is selfish",
+    "Marriage is an outdated institution",
+    "Monogamy is unnatural",
+    "Gender is a social construct",
+    "Cultural appropriation is always wrong",
+    "Political correctness is necessary",
+    "Free speech has limits",
+    "Religion does more harm than good",
+    "Science can answer all questions",
+    "Art has no objective quality",
+    "Modern art is pretentious nonsense",
+    "Classical music is superior to pop music",
+    "Hollywood is out of ideas",
+    "Streaming killed the music industry",
+    "Video games are art",
+    "Sports are overpaid and overvalued",
+    "Professional athletes are overpaid",
+    "Esports are legitimate sports",
+    "Participation trophies ruin kids",
+    "Homeschooling is better than traditional school",
+    "Teachers are underpaid and undervalued",
+    "Student loan debt should be forgiven",
+    "Minimum wage should be $25/hour",
+    "Billionaires shouldn't exist",
+    "Taxes should be much higher",
+    "Healthcare is a human right",
+    "Big pharma is evil",
+    "Alternative medicine has merit",
+    "Plastic surgery is empowering",
+    "Beauty standards are oppressive",
+    "Fashion is a waste of money",
+    "Luxury brands are just expensive marketing",
+    "Fast fashion is destroying the planet",
+    "Veganism is the only ethical diet",
+    "Eating meat is murder",
+    "Dairy is cruel and unnecessary",
+    "Organic food is a scam",
+    "GMOs are safe and necessary",
+    "Lab-grown meat is the future",
+    "Flying is morally wrong due to climate impact",
+    "Cars should be banned in cities",
+    "Public transportation should be free",
+    "Suburbs are urban planning failures",
+    "Skyscrapers are architectural monstrosities",
+    "Modern architecture is ugly",
+    "Brutalism is beautiful",
+    "Graffiti is art, not vandalism",
+    "Museums should return stolen artifacts",
+    "Historical monuments should stay up",
+    "Separate art from the artist",
+    "Piracy is a victimless crime",
+    "Copyright law stifles creativity",
+    "NFTs are worthless scams"
 ];
 
-function generateDebateId() {
-    return `debate_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
+// ============================================
+// SOCKET.IO LOGIC
+// ============================================
 
-function getRandomTopic() {
-    return topics[Math.floor(Math.random() * topics.length)];
-}
-
-function getRandomSide() {
-    return Math.random() > 0.5 ? 'for' : 'against';
-}
-
-// Socket.IO connection handling
 io.on('connection', (socket) => {
-    console.log('✅ User connected:', socket.id);
-
-    // Store user data
+    console.log('User connected:', socket.id);
+    
     userSockets.set(socket.id, {
-        id: socket.id,
-        username: null,
+        socketId: socket.id,
         currentDebate: null,
-        side: null
+        joinedAt: Date.now()
     });
 
-    // Handle user identifying themselves
-    socket.on('set-username', (username) => {
-        const userData = userSockets.get(socket.id);
-        if (userData) {
-            userData.username = username || `User${socket.id.substr(0, 4)}`;
-            console.log(`👤 Username set: ${userData.username}`);
-        }
-    });
-
-    // Handle finding opponent
     socket.on('find-opponent', () => {
-        const userData = userSockets.get(socket.id);
+        console.log('User looking for opponent:', socket.id);
         
-        if (!userData) return;
-        
-        // Check if already in debate
-        if (userData.currentDebate) {
-            socket.emit('error', { message: 'Already in a debate' });
-            return;
-        }
-
-        // Check if someone is waiting
         if (waitingUsers.size > 0) {
-            // Get the first waiting user
-            const opponentId = Array.from(waitingUsers)[0];
-            const opponent = userSockets.get(opponentId);
-
-            if (opponent && opponent.id !== socket.id) {
-                // Remove opponent from waiting list
-                waitingUsers.delete(opponentId);
-
-                // Create debate
-                const debateId = generateDebateId();
-                const topic = getRandomTopic();
-                
-                // Randomly assign sides
-                const user1Side = getRandomSide();
-                const user2Side = user1Side === 'for' ? 'against' : 'for';
-
-                const debate = {
-                    id: debateId,
-                    topic: topic,
-                    user1: {
-                        id: opponentId,
-                        username: opponent.username,
-                        side: user1Side
-                    },
-                    user2: {
-                        id: socket.id,
-                        username: userData.username,
-                        side: user2Side
-                    },
-                    currentSpeaker: opponentId, // User1 starts
-                    phase: 'speaker1', // speaker1, speaker2, open-debate, voting
-                    startedAt: Date.now(),
-                    spectators: new Set()
-                };
-
-                activeDebates.set(debateId, debate);
-
-                // Update user data
-                userData.currentDebate = debateId;
-                userData.side = user2Side;
-                opponent.currentDebate = debateId;
-                opponent.side = user1Side;
-
-                // Create room
-                socket.join(debateId);
-                io.sockets.sockets.get(opponentId)?.join(debateId);
-
-                // Notify both users
-                io.to(debateId).emit('debate-matched', {
-                    debateId: debateId,
-                    topic: topic,
-                    opponent: userData.username,
-                    yourSide: user1Side,
-                    currentSpeaker: opponentId
-                });
-
-                socket.emit('debate-matched', {
-                    debateId: debateId,
-                    topic: topic,
-                    opponent: opponent.username,
-                    yourSide: user2Side,
-                    currentSpeaker: opponentId
-                });
-
-                console.log(`🎭 Debate created: ${debateId}`);
-                console.log(`   Topic: ${topic}`);
-                console.log(`   ${opponent.username} (${user1Side}) vs ${userData.username} (${user2Side})`);
-            }
-        } else {
-            // Add to waiting list
-            waitingUsers.add(socket.id);
-            socket.emit('waiting-for-opponent', { 
-                message: 'Searching for an opponent...',
-                queuePosition: waitingUsers.size 
-            });
-            console.log(`⏳ ${userData.username} added to waiting queue`);
-        }
-    });
-
-    // Handle canceling search
-    socket.on('cancel-search', () => {
-        waitingUsers.delete(socket.id);
-        socket.emit('search-cancelled');
-        console.log(`❌ ${socket.id} cancelled search`);
-    });
-
-    // Handle WebRTC signaling
-    socket.on('webrtc-offer', ({ debateId, offer }) => {
-        socket.to(debateId).emit('webrtc-offer', { offer, from: socket.id });
-    });
-
-    socket.on('webrtc-answer', ({ debateId, answer }) => {
-        socket.to(debateId).emit('webrtc-answer', { answer, from: socket.id });
-    });
-
-    socket.on('webrtc-ice-candidate', ({ debateId, candidate }) => {
-        socket.to(debateId).emit('webrtc-ice-candidate', { candidate, from: socket.id });
-    });
-
-    // Handle phase changes
-    socket.on('advance-phase', ({ debateId }) => {
-        const debate = activeDebates.get(debateId);
-        if (!debate) return;
-
-        // Only allow current speaker to advance
-        if (socket.id !== debate.currentSpeaker) return;
-
-        // Advance phase
-        if (debate.phase === 'speaker1') {
-            debate.phase = 'speaker2';
-            debate.currentSpeaker = debate.user2.id;
-        } else if (debate.phase === 'speaker2') {
-            debate.phase = 'open-debate';
-            debate.currentSpeaker = null;
-        } else if (debate.phase === 'open-debate') {
-            debate.phase = 'voting';
-        }
-
-        io.to(debateId).emit('phase-changed', {
-            phase: debate.phase,
-            currentSpeaker: debate.currentSpeaker
-        });
-    });
-
-    // Handle mute/unmute
-    socket.on('toggle-mute', ({ debateId, muted }) => {
-        socket.to(debateId).emit('opponent-mute-changed', { muted });
-    });
-
-    // Handle emoji reactions
-    socket.on('emoji-reaction', ({ debateId, emoji }) => {
-        socket.to(debateId).emit('emoji-reaction', { emoji, from: socket.id });
-    });
-
-    // Handle chat messages (for spectators)
-    socket.on('chat-message', ({ debateId, message }) => {
-        const userData = userSockets.get(socket.id);
-        io.to(debateId).emit('chat-message', {
-            username: userData?.username || 'Anonymous',
-            message: message,
-            timestamp: Date.now()
-        });
-    });
-
-    // Handle next opponent
-    socket.on('next-opponent', () => {
-        const userData = userSockets.get(socket.id);
-        if (!userData) return;
-
-        // Leave current debate
-        if (userData.currentDebate) {
-            const debate = activeDebates.get(userData.currentDebate);
-            if (debate) {
-                // Notify opponent
-                const opponentId = debate.user1.id === socket.id ? debate.user2.id : debate.user1.id;
-                io.to(opponentId).emit('opponent-left');
-                
-                // Clean up opponent's data
-                const opponent = userSockets.get(opponentId);
-                if (opponent) opponent.currentDebate = null;
-            }
+            const opponentId = waitingUsers.values().next().value;
+            waitingUsers.delete(opponentId);
             
-            socket.leave(userData.currentDebate);
-            activeDebates.delete(userData.currentDebate);
-            userData.currentDebate = null;
+            const topic = DEBATE_TOPICS[Math.floor(Math.random() * DEBATE_TOPICS.length)];
+            const debateId = `debate-${Date.now()}`;
+            
+            const debate = {
+                id: debateId,
+                user1: opponentId,
+                user2: socket.id,
+                topic: topic,
+                phase: 'opening',
+                currentSpeaker: Math.random() < 0.5 ? opponentId : socket.id,
+                startedAt: Date.now()
+            };
+            
+            activeDebates.set(debateId, debate);
+            
+            const user1Data = userSockets.get(opponentId);
+            const user2Data = userSockets.get(socket.id);
+            if (user1Data) user1Data.currentDebate = debateId;
+            if (user2Data) user2Data.currentDebate = debateId;
+            
+            io.to(opponentId).emit('debate-matched', {
+                debateId,
+                topic,
+                isFirstSpeaker: debate.currentSpeaker === opponentId,
+                opponentId: socket.id
+            });
+            
+            socket.emit('debate-matched', {
+                debateId,
+                topic,
+                isFirstSpeaker: debate.currentSpeaker === socket.id,
+                opponentId: opponentId
+            });
+            
+            console.log(`Debate started: ${debateId} - ${topic}`);
+        } else {
+            waitingUsers.add(socket.id);
+            console.log('User added to waiting queue:', socket.id);
         }
-
-        // Try to find new opponent
-        socket.emit('ready-for-next');
     });
 
-    // Handle spectator joining
-    socket.on('spectate-debate', ({ debateId }) => {
-        const debate = activeDebates.get(debateId);
-        if (!debate) {
-            socket.emit('error', { message: 'Debate not found' });
-            return;
-        }
-
-        socket.join(debateId);
-        debate.spectators.add(socket.id);
-
-        socket.emit('spectating', {
-            debateId: debateId,
-            topic: debate.topic,
-            users: [debate.user1, debate.user2],
-            phase: debate.phase,
-            spectatorCount: debate.spectators.size
+    socket.on('webrtc-offer', ({ offer, to }) => {
+        console.log(`WebRTC offer from ${socket.id} to ${to}`);
+        io.to(to).emit('webrtc-offer', {
+            offer,
+            from: socket.id
         });
-
-        // Notify others of new spectator count
-        io.to(debateId).emit('spectator-count', { count: debate.spectators.size });
     });
 
-    // Handle spectator vote
-    socket.on('spectator-vote', ({ debateId, votedFor }) => {
-        socket.to(debateId).emit('vote-cast', { votedFor });
+    socket.on('webrtc-answer', ({ answer, to }) => {
+        console.log(`WebRTC answer from ${socket.id} to ${to}`);
+        io.to(to).emit('webrtc-answer', {
+            answer,
+            from: socket.id
+        });
     });
 
-    // Handle disconnect
-    socket.on('disconnect', () => {
-        console.log('❌ User disconnected:', socket.id);
+    socket.on('webrtc-ice-candidate', ({ candidate, to }) => {
+        io.to(to).emit('webrtc-ice-candidate', {
+            candidate,
+            from: socket.id
+        });
+    });
 
-        // Remove from waiting list
-        waitingUsers.delete(socket.id);
-
+    socket.on('turn-completed', () => {
         const userData = userSockets.get(socket.id);
         if (userData && userData.currentDebate) {
             const debate = activeDebates.get(userData.currentDebate);
-            
             if (debate) {
-                // Notify opponent
-                const opponentId = debate.user1.id === socket.id ? debate.user2.id : debate.user1.id;
+                if (debate.phase === 'opening') {
+                    debate.currentSpeaker = debate.currentSpeaker === debate.user1 ? debate.user2 : debate.user1;
+                    
+                    io.to(debate.user1).emit('turn-change', {
+                        isYourTurn: debate.currentSpeaker === debate.user1,
+                        phase: 'opening'
+                    });
+                    io.to(debate.user2).emit('turn-change', {
+                        isYourTurn: debate.currentSpeaker === debate.user2,
+                        phase: 'opening'
+                    });
+                    
+                    if (debate.currentSpeaker === debate.user1) {
+                        debate.phase = 'open-debate';
+                        io.to(debate.user1).emit('open-debate');
+                        io.to(debate.user2).emit('open-debate');
+                    }
+                }
+            }
+        }
+    });
+
+    socket.on('cancel-search', () => {
+        waitingUsers.delete(socket.id);
+        console.log('User cancelled search:', socket.id);
+    });
+
+    socket.on('leave-debate', () => {
+        handleDisconnect(socket);
+    });
+
+    socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+        handleDisconnect(socket);
+    });
+
+    function handleDisconnect(socket) {
+        waitingUsers.delete(socket.id);
+        
+        const userData = userSockets.get(socket.id);
+        if (userData && userData.currentDebate) {
+            const debate = activeDebates.get(userData.currentDebate);
+            if (debate) {
+                const opponentId = debate.user1 === socket.id ? debate.user2 : debate.user1;
                 
                 io.to(opponentId).emit('opponent-disconnected');
 
-                // Clean up opponent's data
                 const opponentData = userSockets.get(opponentId);
                 if (opponentData) opponentData.currentDebate = null;
 
-                // Remove debate
                 activeDebates.delete(userData.currentDebate);
             }
         }
 
-        // Remove user data
         userSockets.delete(socket.id);
-    });
+    }
 });
 
-// Health check endpoint
+// ============================================
+// API ENDPOINTS
+// ============================================
+
 app.get('/health', (req, res) => {
     res.json({
         status: 'ok',
@@ -352,7 +314,6 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Stats endpoint
 app.get('/stats', (req, res) => {
     res.json({
         waitingUsers: waitingUsers.size,
@@ -366,11 +327,14 @@ app.get('/stats', (req, res) => {
     });
 });
 
+// ============================================
+// START SERVER
+// ============================================
+
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
     console.log(`🚀 Debatr server running on port ${PORT}`);
     console.log(`📊 Health check: http://localhost:${PORT}/health`);
     console.log(`📈 Stats: http://localhost:${PORT}/stats`);
-    console.log(`📱 iOS API available at /api/*`);
 });
