@@ -3196,13 +3196,28 @@
                 function handleMatchFromAPI(debate) {
                     console.log('🎉 MATCHED!', debate);
                     clearTimeout(findOpponentTimeout);
-                    loadingOverlay.classList.remove('active');
+                    
                     const topicText = debate.topic?.text || debate.topic || 'Unknown topic';
-                    setupScreen.style.display = 'none';
-                    debateScreen.style.display = 'flex';
-                    document.getElementById('debate-topic').textContent = topicText;
+                    
+                    // Update UI elements (matching Socket.IO approach)
+                    loadingText.textContent = 'Opponent found!';
+                    loadingSubtext.textContent = 'Preparing debate...';
+                    
                     window.currentDebateId = debate.id;
-                    startDebateTimer(30, 1);
+                    currentDebate = debate.id;
+                    debateStartTime = Date.now();
+                    
+                    topicElement.textContent = topicText;
+                    connectionStatus.textContent = 'Matched! Starting soon...';
+                    connectionStatus.className = 'connection-status connected';
+                    
+                    nextOpponentBtn.disabled = false;
+                    nextOpponentBtn.innerHTML = '<span>⏭️ Next Opponent</span>';
+                    
+                    // Show emoji bar
+                    emojiBar.style.display = 'flex';
+                    
+                    // Track in analytics
                     if (typeof mixpanel !== 'undefined') {
                         mixpanel.track('Debate Matched', { 'debate_id': debate.id, 'topic': topicText });
                     }
@@ -3221,10 +3236,17 @@
                     
                     console.log('🎬 Starting WebRTC, isSpeaker1:', isSpeaker1);
                     
-                    // Initialize WebRTC
+                    // Show countdown and initialize WebRTC (matching Socket.IO approach)
                     setTimeout(async () => {
+                        await showCountdown();
+                        loadingOverlay.classList.remove('active');
                         await initWebRTC(isSpeaker1);
-                    }, 1000);
+                        
+                        // Start recording after a delay
+                        setTimeout(() => {
+                            startRecording();
+                        }, 1000);
+                    }, 500);
                 }
                 
                 checkForMatch();
