@@ -3206,6 +3206,25 @@
                     if (typeof mixpanel !== 'undefined') {
                         mixpanel.track('Debate Matched', { 'debate_id': debate.id, 'topic': topicText });
                     }
+                    
+                    // START WEBRTC AFTER MATCHING
+                    const participants = debate.participants || [];
+                    let isSpeaker1 = false;
+                    
+                    // Find if we're speaker 1
+                    for (const p of participants) {
+                        if (p.id === userId) {
+                            isSpeaker1 = p.isSpeaker1 || false;
+                            break;
+                        }
+                    }
+                    
+                    console.log('🎬 Starting WebRTC, isSpeaker1:', isSpeaker1);
+                    
+                    // Initialize WebRTC
+                    setTimeout(async () => {
+                        await initWebRTC(isSpeaker1);
+                    }, 1000);
                 }
                 
                 checkForMatch();
