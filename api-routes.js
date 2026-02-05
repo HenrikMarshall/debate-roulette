@@ -144,6 +144,9 @@ router.post('/debates/find-opponent', (req, res) => {
                 timeRemaining: 30
             };
             
+            // Store in activeDebates so WebRTC signaling can find it!
+            activeDebates.set(debateId, debate);
+            
             console.log(`🎉 API-API match! ${waitingUser.user.username} + ${username}`);
             
             // Respond to both users
