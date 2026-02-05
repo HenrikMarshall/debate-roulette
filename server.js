@@ -297,19 +297,124 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('webrtc-answer', ({ answer, to }) => {
-        console.log(`WebRTC answer from ${socket.id} to ${to}`);
-        io.to(to).emit('webrtc-answer', {
-            answer,
-            from: socket.id
-        });
+    socket.on('webrtc-answer', ({ answer, to, debateId }) => {
+        console.log(`WebRTC answer from ${socket.id} to ${to || 'unknown'}, debate: ${debateId}`);
+        
+        // If 'to' is provided, use direct Socket.IO forwarding (old way)
+        if (to) {
+            io.to(to).emit('webrtc-answer', {
+                answer,
+                from: socket.id
+            });
+            return;
+        }
+        
+        // If debateId is provided, look up opponent and forward appropriately
+        if (debateId && activeDebates.has(debateId)) {
+            const debate = activeDebates.get(debateId);
+            
+            // Find opponent ID
+            let opponentId = null;
+            if (debate.user1 === socket.id) {
+                opponentId = debate.user2;
+            } else if (debate.user2 === socket.id) {
+                opponentId = debate.user1;
+            } else if (debate.participants) {
+                // Check participants array for API matches
+                for (const p of debate.participants) {
+                    if (p.id !== socket.id && userSockets.has(p.id)) {
+                        opponentId = p.id;
+                        break;
+                    } else if (p.id !== socket.id) {
+                        // This is an API user
+                        opponentId = p.id;
+                        break;
+                    }
+                }
+            }
+            
+            if (opponentId) {
+                // Check if opponent is Socket.IO user or API user
+                if (userSockets.has(opponentId)) {
+                    // Socket.IO user - forward directly
+                    io.to(opponentId).emit('webrtc-answer', {
+                        answer,
+                        from: socket.id
+                    });
+                    console.log(`✅ Forwarded answer to Socket.IO user ${opponentId}`);
+                } else {
+                    // API user - store for polling
+                    const apiRoutes = require('./api-routes');
+                    apiRoutes.storePendingSignal(opponentId, {
+                        type: 'answer',
+                        answer,
+                        from: socket.id,
+                        timestamp: Date.now()
+                    });
+                    console.log(`✅ Stored answer for API user ${opponentId}`);
+                }
+            } else {
+                console.log(`❌ Could not find opponent for debate ${debateId}`);
+            }
+        }
     });
 
-    socket.on('webrtc-ice-candidate', ({ candidate, to }) => {
-        io.to(to).emit('webrtc-ice-candidate', {
-            candidate,
-            from: socket.id
-        });
+    socket.on('webrtc-ice-candidate', ({ candidate, to, debateId }) => {
+        console.log(`WebRTC ICE from ${socket.id} to ${to || 'unknown'}, debate: ${debateId}`);
+        
+        // If 'to' is provided, use direct Socket.IO forwarding (old way)
+        if (to) {
+            io.to(to).emit('webrtc-ice-candidate', {
+                candidate,
+                from: socket.id
+            });
+            return;
+        }
+        
+        // If debateId is provided, look up opponent and forward appropriately
+        if (debateId && activeDebates.has(debateId)) {
+            const debate = activeDebates.get(debateId);
+            
+            // Find opponent ID
+            let opponentId = null;
+            if (debate.user1 === socket.id) {
+                opponentId = debate.user2;
+            } else if (debate.user2 === socket.id) {
+                opponentId = debate.user1;
+            } else if (debate.participants) {
+                // Check participants array for API matches
+                for (const p of debate.participants) {
+                    if (p.id !== socket.id && userSockets.has(p.id)) {
+                        opponentId = p.id;
+                        break;
+                    } else if (p.id !== socket.id) {
+                        // This is an API user
+                        opponentId = p.id;
+                        break;
+                    }
+                }
+            }
+            
+            if (opponentId) {
+                // Check if opponent is Socket.IO user or API user
+                if (userSockets.has(opponentId)) {
+                    // Socket.IO user - forward directly
+                    io.to(opponentId).emit('webrtc-ice-candidate', {
+                        candidate,
+                        from: socket.id
+                    });
+                } else {
+                    // API user - store for polling (but don't log each one)
+                    const apiRoutes = require('./api-routes');
+                    apiRoutes.storePendingSignal(opponentId, {
+                        type: 'ice-candidate',
+                        candidate,
+                        from: socket.id,
+                        timestamp: Date.now()
+                    });
+                }
+            }
+        }
     });
 
     socket.on('turn-completed', () => {
