@@ -3236,6 +3236,40 @@
                     
                     console.log('🎬 Starting WebRTC, isSpeaker1:', isSpeaker1);
                     
+                    // START POLLING FOR WEBRTC SIGNALS (since we matched via API)
+                    let pollInterval = setInterval(async () => {
+                        try {
+                            const response = await fetch(`/api/webrtc/poll/${userId}`);
+                            const data = await response.json();
+                            
+                            if (data.signals && data.signals.length > 0) {
+                                console.log('📥 Received signals:', data.signals.length);
+                                
+                                for (const signal of data.signals) {
+                                    console.log('📨 Processing signal:', signal.type);
+                                    
+                                    if (signal.type === 'offer' && signal.offer) {
+                                        await handleOffer(signal.offer);
+                                    } else if (signal.type === 'answer' && signal.answer) {
+                                        await handleAnswer(signal.answer);
+                                    } else if (signal.type === 'ice-candidate' && signal.candidate) {
+                                        if (peerConnection) {
+                                            await peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Poll error:', error);
+                        }
+                    }, 1000); // Poll every second
+                    
+                    // Stop polling after 60 seconds (connection should be established by then)
+                    setTimeout(() => {
+                        clearInterval(pollInterval);
+                        console.log('⏹️ Stopped WebRTC signal polling');
+                    }, 60000);
+                    
                     // Show countdown and initialize WebRTC (matching Socket.IO approach)
                     setTimeout(async () => {
                         await showCountdown();
