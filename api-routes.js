@@ -334,6 +334,18 @@ router.patch('/users/:userId/stats', (req, res) => {
 // Store pending signaling messages for API users
 const pendingSignals = new Map(); // userId -> [signals]
 
+// Helper function to store signals (can be called from server.js)
+function storePendingSignal(userId, signal) {
+    if (!pendingSignals.has(userId)) {
+        pendingSignals.set(userId, []);
+    }
+    pendingSignals.get(userId).push(signal);
+    console.log(`📦 Stored signal for ${userId}:`, signal.type);
+}
+
+// Export the helper
+router.storePendingSignal = storePendingSignal;
+
 // Send WebRTC offer
 router.post('/webrtc/offer', (req, res) => {
     const { debateId, userId, offer } = req.body;
