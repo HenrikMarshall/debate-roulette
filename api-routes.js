@@ -338,19 +338,37 @@ router.post('/webrtc/offer', (req, res) => {
     console.log(`📤 WebRTC offer from ${userId} for debate ${debateId}`);
     
     if (!activeDebates.has(debateId)) {
+        console.log(`❌ Debate ${debateId} not found`);
         return res.status(404).json({ error: 'Debate not found' });
     }
     
     const debate = activeDebates.get(debateId);
     
-    // Find opponent - could be WebSocket user or API user
-    const opponentId = debate.user2 && debate.user2.id === userId ? 
-        (debate.user1 ? debate.user1.id : null) : 
-        (debate.user2 ? debate.user2.id : null);
+    // Find opponent - check both user1 and user2 structures
+    let opponentId = null;
+    
+    if (debate.user1 && debate.user1.id === userId) {
+        opponentId = debate.user2 ? debate.user2.id : null;
+    } else if (debate.user2 && debate.user2.id === userId) {
+        opponentId = debate.user1 ? debate.user1.id : null;
+    }
+    
+    // Also check participants array
+    if (!opponentId && debate.participants) {
+        for (const participant of debate.participants) {
+            if (participant.id !== userId) {
+                opponentId = participant.id;
+                break;
+            }
+        }
+    }
     
     if (!opponentId) {
+        console.log(`❌ Opponent not found for user ${userId}`);
         return res.status(400).json({ error: 'Opponent not found' });
     }
+    
+    console.log(`✅ Found opponent: ${opponentId}`);
     
     // Check if opponent is a WebSocket user
     if (userSockets && userSockets.has(opponentId)) {
@@ -435,10 +453,24 @@ router.post('/webrtc/ice-candidate', (req, res) => {
     
     const debate = activeDebates.get(debateId);
     
-    // Find opponent
-    const opponentId = debate.user2 && debate.user2.id === userId ? 
-        (debate.user1 ? debate.user1.id : null) : 
-        (debate.user2 ? debate.user2.id : null);
+    // Find opponent - check both user1 and user2 structures
+    let opponentId = null;
+    
+    if (debate.user1 && debate.user1.id === userId) {
+        opponentId = debate.user2 ? debate.user2.id : null;
+    } else if (debate.user2 && debate.user2.id === userId) {
+        opponentId = debate.user1 ? debate.user1.id : null;
+    }
+    
+    // Also check participants array
+    if (!opponentId && debate.participants) {
+        for (const participant of debate.participants) {
+            if (participant.id !== userId) {
+                opponentId = participant.id;
+                break;
+            }
+        }
+    }
     
     if (!opponentId) {
         return res.status(400).json({ error: 'Opponent not found' });
