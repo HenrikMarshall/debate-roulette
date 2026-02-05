@@ -325,6 +325,166 @@ router.patch('/users/:userId/stats', (req, res) => {
 });
 
 // ==========================================
+// WEBRTC SIGNALING ENDPOINTS
+// ==========================================
+
+// Store pending signaling messages for API users
+const pendingSignals = new Map(); // userId -> [signals]
+
+// Send WebRTC offer
+router.post('/webrtc/offer', (req, res) => {
+    const { debateId, userId, offer } = req.body;
+    
+    console.log(`📤 WebRTC offer from ${userId} for debate ${debateId}`);
+    
+    if (!activeDebates.has(debateId)) {
+        return res.status(404).json({ error: 'Debate not found' });
+    }
+    
+    const debate = activeDebates.get(debateId);
+    
+    // Find opponent - could be WebSocket user or API user
+    const opponentId = debate.user2 && debate.user2.id === userId ? 
+        (debate.user1 ? debate.user1.id : null) : 
+        (debate.user2 ? debate.user2.id : null);
+    
+    if (!opponentId) {
+        return res.status(400).json({ error: 'Opponent not found' });
+    }
+    
+    // Check if opponent is a WebSocket user
+    if (userSockets && userSockets.has(opponentId)) {
+        // Send via Socket.IO
+        io.to(opponentId).emit('webrtc-offer', {
+            offer,
+            from: userId
+        });
+        console.log(`✅ Sent offer to WebSocket user ${opponentId}`);
+    } else {
+        // Store for API user to poll
+        if (!pendingSignals.has(opponentId)) {
+            pendingSignals.set(opponentId, []);
+        }
+        pendingSignals.get(opponentId).push({
+            type: 'offer',
+            offer,
+            from: userId,
+            timestamp: Date.now()
+        });
+        console.log(`✅ Stored offer for API user ${opponentId}`);
+    }
+    
+    res.json({ success: true });
+});
+
+// Send WebRTC answer
+router.post('/webrtc/answer', (req, res) => {
+    const { debateId, userId, answer } = req.body;
+    
+    console.log(`📤 WebRTC answer from ${userId} for debate ${debateId}`);
+    
+    if (!activeDebates.has(debateId)) {
+        return res.status(404).json({ error: 'Debate not found' });
+    }
+    
+    const debate = activeDebates.get(debateId);
+    
+    // Find opponent
+    const opponentId = debate.user2 && debate.user2.id === userId ? 
+        (debate.user1 ? debate.user1.id : null) : 
+        (debate.user2 ? debate.user2.id : null);
+    
+    if (!opponentId) {
+        return res.status(400).json({ error: 'Opponent not found' });
+    }
+    
+    // Check if opponent is a WebSocket user
+    if (userSockets && userSockets.has(opponentId)) {
+        // Send via Socket.IO
+        io.to(opponentId).emit('webrtc-answer', {
+            answer,
+            from: userId
+        });
+        console.log(`✅ Sent answer to WebSocket user ${opponentId}`);
+    } else {
+        // Store for API user to poll
+        if (!pendingSignals.has(opponentId)) {
+            pendingSignals.set(opponentId, []);
+        }
+        pendingSignals.get(opponentId).push({
+            type: 'answer',
+            answer,
+            from: userId,
+            timestamp: Date.now()
+        });
+        console.log(`✅ Stored answer for API user ${opponentId}`);
+    }
+    
+    res.json({ success: true });
+});
+
+// Send ICE candidate
+router.post('/webrtc/ice-candidate', (req, res) => {
+    const { debateId, userId, candidate } = req.body;
+    
+    console.log(`📤 ICE candidate from ${userId} for debate ${debateId}`);
+    
+    if (!activeDebates.has(debateId)) {
+        return res.status(404).json({ error: 'Debate not found' });
+    }
+    
+    const debate = activeDebates.get(debateId);
+    
+    // Find opponent
+    const opponentId = debate.user2 && debate.user2.id === userId ? 
+        (debate.user1 ? debate.user1.id : null) : 
+        (debate.user2 ? debate.user2.id : null);
+    
+    if (!opponentId) {
+        return res.status(400).json({ error: 'Opponent not found' });
+    }
+    
+    // Check if opponent is a WebSocket user
+    if (userSockets && userSockets.has(opponentId)) {
+        // Send via Socket.IO
+        io.to(opponentId).emit('webrtc-ice-candidate', {
+            candidate,
+            from: userId
+        });
+        console.log(`✅ Sent ICE candidate to WebSocket user ${opponentId}`);
+    } else {
+        // Store for API user to poll
+        if (!pendingSignals.has(opponentId)) {
+            pendingSignals.set(opponentId, []);
+        }
+        pendingSignals.get(opponentId).push({
+            type: 'ice-candidate',
+            candidate,
+            from: userId,
+            timestamp: Date.now()
+        });
+        console.log(`✅ Stored ICE candidate for API user ${opponentId}`);
+    }
+    
+    res.json({ success: true });
+});
+
+// Poll for WebRTC signals (for API users to receive signals)
+router.get('/webrtc/poll/:userId', (req, res) => {
+    const userId = req.params.userId;
+    
+    if (pendingSignals.has(userId)) {
+        const signals = pendingSignals.get(userId);
+        pendingSignals.delete(userId);
+        
+        console.log(`📥 Sending ${signals.length} pending signals to ${userId}`);
+        return res.json({ signals });
+    }
+    
+    res.json({ signals: [] });
+});
+
+// ==========================================
 // STATS/HEALTH ENDPOINTS
 // ==========================================
 
