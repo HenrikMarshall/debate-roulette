@@ -18,23 +18,6 @@ app.use(cors());
 app.use(express.json());
 
 // ============================================
-// API ROUTES - Mount the REST API
-// ============================================
-
-const apiRoutes = require('./api-routes');
-
-// Inject dependencies into API routes
-apiRoutes.setDependencies({
-    waitingUsers,
-    activeDebates,
-    userSockets,
-    io
-});
-
-// Mount API routes with /api prefix
-app.use('/api', apiRoutes);
-
-// ============================================
 // ROUTES FIRST - BEFORE express.static()
 // ============================================
 
@@ -68,6 +51,27 @@ app.use(express.static('public'));
 const waitingUsers = new Set();
 const activeDebates = new Map();
 const userSockets = new Map();
+
+// ============================================
+// API ROUTES - Mount the REST API (after state is declared)
+// ============================================
+
+const apiRoutes = require('./api-routes');
+
+// Inject dependencies into API routes
+apiRoutes.setDependencies({
+    waitingUsers,
+    activeDebates,
+    userSockets,
+    io
+});
+
+// Mount API routes with /api prefix
+app.use('/api', apiRoutes);
+
+// ============================================
+// DEBATE TOPICS
+// ============================================
 
 const DEBATE_TOPICS = [
     "Pineapple belongs on pizza",
