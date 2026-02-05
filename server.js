@@ -209,6 +209,12 @@ io.on('connection', (socket) => {
             
             activeDebates.set(debateId, debate);
             
+            // Initialize debate phase system
+            const apiRoutes = require('./api-routes');
+            const speaker1 = debate.currentSpeaker === opponentId ? opponentId : socket.id;
+            const speaker2 = debate.currentSpeaker === opponentId ? socket.id : opponentId;
+            apiRoutes.initDebatePhase(debateId, speaker1, speaker2);
+            
             const user1Data = userSockets.get(opponentId);
             const user2Data = userSockets.get(socket.id);
             if (user1Data) user1Data.currentDebate = debateId;
@@ -233,6 +239,12 @@ io.on('connection', (socket) => {
             waitingUsers.add(socket.id);
             console.log('User added to waiting queue:', socket.id);
         }
+    });
+
+    socket.on('participant-ready', ({ debateId }) => {
+        console.log(`📍 ${socket.id} marking ready for ${debateId}`);
+        const apiRoutes = require('./api-routes');
+        apiRoutes.markParticipantReady(debateId, socket.id);
     });
 
     socket.on('webrtc-offer', ({ offer, to, debateId }) => {

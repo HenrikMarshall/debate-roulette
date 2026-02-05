@@ -2385,6 +2385,11 @@
         let currentRound = 1;
         let lastTurnChangeTime = 0;
         
+        // Phase handler variables
+        let currentPhase = 'waiting';
+        let phaseTimer = null;
+        let phasePollInterval = null;
+        
         // Video recording state
         let mediaRecorder = null;
         let recordedChunks = [];
@@ -2595,6 +2600,12 @@
                     if (peerConnection && candidate) {
                         await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
                     }
+                });
+
+                // Listen for phase changes (new debate flow system)
+                socket.on('debate-phase-change', (phaseData) => {
+                    console.log('📊 Phase change via Socket.IO:', phaseData);
+                    handlePhaseChange(phaseData);
                 });
 
                 socket.on('turn-change', ({ currentSpeaker, phase }) => {
@@ -2837,6 +2848,11 @@
                         muted: remoteVideo.muted,
                         volume: remoteVideo.volume
                     });
+                    
+                    // Mark ready when video track is received
+                    if (event.track.kind === 'video' && currentDebate) {
+                        markReady(currentDebate, userId);
+                    }
                 }
             };
 
@@ -3236,6 +3252,9 @@
                     
                     console.log('🎬 Starting WebRTC, isSpeaker1:', isSpeaker1);
                     
+                    // START PHASE POLLING (for debate flow)
+                    startPhasePolling(debate.id, userId);
+                    
                     // START POLLING FOR WEBRTC SIGNALS (since we matched via API)
                     let pollInterval = setInterval(async () => {
                         try {
@@ -3544,6 +3563,9 @@
         function endDebateCleanup() {
             if (timerInterval) clearInterval(timerInterval);
             
+            // Stop phase polling
+            stopPhasePolling();
+            
             // Stop recording if active
             stopRecording();
             
@@ -3629,6 +3651,221 @@
             currentDebate = null;
             debateStartTime = null;
             spectatorCount = 0;
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // DEBATE PHASE HANDLER SYSTEM
+        // ═══════════════════════════════════════════════════════════
+        
+        // Start polling for phase changes (backup for API matches)
+        function startPhasePolling(debateId, myUserId) {
+            console.log('🔄 Starting phase polling...');
+            
+            phasePollInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/api/debates/${debateId}/phase`);
+                    const phaseData = await response.json();
+                    
+                    if (phaseData.phase !== currentPhase || phaseData.round !== currentRound) {
+                        console.log('📊 Phase change via polling:', phaseData);
+                        handlePhaseChange(phaseData);
+                    }
+                } catch (error) {
+                    console.error('Phase poll error:', error);
+                }
+            }, 1000);
+        }
+
+        function stopPhasePolling() {
+            if (phasePollInterval) {
+                clearInterval(phasePollInterval);
+                phasePollInterval = null;
+            }
+        }
+
+        // Mark as ready when video is connected
+        function markReady(debateId, myUserId) {
+            console.log('✅ Marking ready for debate');
+            
+            // Send via Socket.IO
+            socket.emit('participant-ready', { debateId });
+            
+            // Also send via API (for API matches)
+            fetch(`/api/debates/${debateId}/ready`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: myUserId })
+            }).catch(err => console.error('Ready API error:', err));
+        }
+
+        // Handle phase transitions
+        function handlePhaseChange(phaseData) {
+            const { phase, round, timeRemaining: phaseDuration, speaker1Id, speaker2Id } = phaseData;
+            
+            currentPhase = phase;
+            currentRound = round;
+            
+            // Clear existing timer
+            if (phaseTimer) {
+                clearInterval(phaseTimer);
+            }
+            
+            // Determine if we're speaker 1 or 2
+            const amSpeaker1 = (userId === speaker1Id);
+            
+            switch (phase) {
+                case 'waiting':
+                    showWaitingPhase();
+                    break;
+                    
+                case 'speaker1':
+                    if (amSpeaker1) {
+                        startSpeakingPhase(phaseDuration, round);
+                    } else {
+                        startListeningPhase(phaseDuration, round);
+                    }
+                    break;
+                    
+                case 'speaker2':
+                    if (!amSpeaker1) { // We're speaker 2
+                        startSpeakingPhase(phaseDuration, round);
+                    } else {
+                        startListeningPhase(phaseDuration, round);
+                    }
+                    break;
+                    
+                case 'open':
+                    startOpenDebatePhase(phaseDuration, round);
+                    break;
+                    
+                case 'countdown':
+                    showCountdownPhase(phaseDuration, round);
+                    break;
+            }
+        }
+
+        function showWaitingPhase() {
+            console.log('⏳ Waiting for both participants...');
+            localVideoWrapper.querySelector('.status-indicator').textContent = 'WAITING';
+            remoteVideoWrapper.querySelector('.status-indicator').textContent = 'WAITING';
+            localTimer.textContent = '--';
+            remoteTimer.textContent = '--';
+        }
+
+        function startSpeakingPhase(duration, round) {
+            console.log(`🎤 MY TURN - Round ${round} - ${duration}s`);
+            
+            isLocalTurn = true;
+            
+            // Visual indicators
+            localVideoWrapper.classList.add('speaking');
+            localVideoWrapper.classList.remove('muted');
+            remoteVideoWrapper.classList.add('muted');
+            remoteVideoWrapper.classList.remove('speaking');
+            
+            localVideoWrapper.querySelector('.status-indicator').textContent = `SPEAKING - ROUND ${round}`;
+            localVideoWrapper.querySelector('.status-indicator').classList.add('active');
+            remoteVideoWrapper.querySelector('.status-indicator').textContent = 'MUTED';
+            remoteVideoWrapper.querySelector('.status-indicator').classList.remove('active');
+            
+            // Enable my mic
+            if (localStream) {
+                localStream.getAudioTracks().forEach(track => track.enabled = true);
+            }
+            
+            // Mute opponent
+            if (remoteVideo) {
+                remoteVideo.muted = true;
+            }
+            
+            startPhaseTimer(duration);
+        }
+
+        function startListeningPhase(duration, round) {
+            console.log(`👂 LISTENING - Round ${round} - ${duration}s`);
+            
+            isLocalTurn = false;
+            
+            // Visual indicators
+            remoteVideoWrapper.classList.add('speaking');
+            remoteVideoWrapper.classList.remove('muted');
+            localVideoWrapper.classList.add('muted');
+            localVideoWrapper.classList.remove('speaking');
+            
+            remoteVideoWrapper.querySelector('.status-indicator').textContent = `SPEAKING - ROUND ${round}`;
+            remoteVideoWrapper.querySelector('.status-indicator').classList.add('active');
+            localVideoWrapper.querySelector('.status-indicator').textContent = 'MUTED';
+            localVideoWrapper.querySelector('.status-indicator').classList.remove('active');
+            
+            // Mute my mic
+            if (localStream) {
+                localStream.getAudioTracks().forEach(track => track.enabled = false);
+            }
+            
+            // Unmute opponent
+            if (remoteVideo) {
+                remoteVideo.muted = false;
+                remoteVideo.volume = 1.0;
+            }
+            
+            startPhaseTimer(duration);
+        }
+
+        function startOpenDebatePhase(duration, round) {
+            console.log(`💬 OPEN DEBATE - Round ${round} - ${duration}s`);
+            
+            // Both unmuted
+            localVideoWrapper.classList.remove('muted', 'speaking');
+            remoteVideoWrapper.classList.remove('muted', 'speaking');
+            
+            localVideoWrapper.querySelector('.status-indicator').textContent = `OPEN DEBATE - ROUND ${round}`;
+            remoteVideoWrapper.querySelector('.status-indicator').textContent = `OPEN DEBATE - ROUND ${round}`;
+            
+            // Enable both mics
+            if (localStream) {
+                localStream.getAudioTracks().forEach(track => track.enabled = true);
+            }
+            if (remoteVideo) {
+                remoteVideo.muted = false;
+                remoteVideo.volume = 1.0;
+            }
+            
+            startPhaseTimer(duration);
+        }
+
+        function showCountdownPhase(duration, nextRound) {
+            console.log(`⏰ COUNTDOWN - Next Round: ${nextRound}`);
+            
+            // Show countdown message
+            localVideoWrapper.querySelector('.status-indicator').textContent = 'GET READY FOR NEXT ROUND';
+            remoteVideoWrapper.querySelector('.status-indicator').textContent = 'GET READY FOR NEXT ROUND';
+            
+            startPhaseTimer(duration);
+        }
+
+        function startPhaseTimer(duration) {
+            let timeRemaining = duration;
+            
+            localTimer.textContent = timeRemaining + 's';
+            remoteTimer.textContent = timeRemaining + 's';
+            
+            phaseTimer = setInterval(() => {
+                timeRemaining--;
+                localTimer.textContent = timeRemaining + 's';
+                remoteTimer.textContent = timeRemaining + 's';
+                
+                if (timeRemaining <= 5) {
+                    localTimer.classList.add('warning');
+                    remoteTimer.classList.add('warning');
+                } else {
+                    localTimer.classList.remove('warning');
+                    remoteTimer.classList.remove('warning');
+                }
+                
+                if (timeRemaining <= 0) {
+                    clearInterval(phaseTimer);
+                }
+            }, 1000);
         }
 
         // Debate end modal button handlers

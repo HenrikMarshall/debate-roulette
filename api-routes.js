@@ -147,6 +147,10 @@ router.post('/debates/find-opponent', (req, res) => {
             // Store in activeDebates so WebRTC signaling can find it!
             activeDebates.set(debateId, debate);
             
+            // Initialize debate phase system
+            const apiRoutes = require('./api-routes');
+            apiRoutes.initDebatePhase(debateId, waitingUserId, userId);
+            
             console.log(`🎉 API-API match! ${waitingUser.user.username} + ${username}`);
             
             // Respond to both users
@@ -289,6 +293,39 @@ router.get('/topics', (req, res) => {
 });
 
 // ==========================================
+// DEBATE PHASE ENDPOINTS
+// ==========================================
+
+// Mark participant as ready
+router.post('/debates/:debateId/ready', (req, res) => {
+    const { debateId } = req.params;
+    const { userId } = req.body;
+    
+    console.log(`📍 ${userId} marking ready for ${debateId}`);
+    
+    const started = markParticipantReady(debateId, userId);
+    
+    res.json({ 
+        success: true,
+        started: started,
+        phase: getDebatePhase(debateId)
+    });
+});
+
+// Get current debate phase (for polling)
+router.get('/debates/:debateId/phase', (req, res) => {
+    const { debateId } = req.params;
+    
+    const phase = getDebatePhase(debateId);
+    
+    if (!phase) {
+        return res.status(404).json({ error: 'Debate not found' });
+    }
+    
+    res.json(phase);
+});
+
+// ==========================================
 // USER ENDPOINTS
 // ==========================================
 
@@ -334,6 +371,9 @@ router.patch('/users/:userId/stats', (req, res) => {
 // Store pending signaling messages for API users
 const pendingSignals = new Map(); // userId -> [signals]
 
+// Store debate phases
+const debatePhases = new Map(); // debateId -> phase state
+
 // Helper function to store signals (can be called from server.js)
 function storePendingSignal(userId, signal) {
     if (!pendingSignals.has(userId)) {
@@ -343,8 +383,139 @@ function storePendingSignal(userId, signal) {
     console.log(`📦 Stored signal for ${userId}:`, signal.type);
 }
 
-// Export the helper
+// Initialize debate phase
+function initDebatePhase(debateId, speaker1Id, speaker2Id) {
+    debatePhases.set(debateId, {
+        phase: 'waiting',
+        round: 1,
+        timeRemaining: 0,
+        speaker1Id: speaker1Id,
+        speaker2Id: speaker2Id,
+        readyParticipants: new Set(),
+        timer: null,
+        lastUpdate: Date.now()
+    });
+    console.log(`📊 Initialized debate ${debateId} - Speaker1: ${speaker1Id}, Speaker2: ${speaker2Id}`);
+}
+
+// Mark participant as ready
+function markParticipantReady(debateId, participantId) {
+    const phase = debatePhases.get(debateId);
+    if (!phase) return false;
+    
+    phase.readyParticipants.add(participantId);
+    console.log(`✅ ${participantId} ready for debate ${debateId} (${phase.readyParticipants.size}/2)`);
+    
+    // If both ready, start speaker 1 phase
+    if (phase.readyParticipants.size === 2 && phase.phase === 'waiting') {
+        console.log(`🎬 Both ready! Starting debate ${debateId}`);
+        transitionToPhase(debateId, 'speaker1', 30);
+        return true;
+    }
+    
+    return false;
+}
+
+// Transition to a new phase
+function transitionToPhase(debateId, newPhase, duration) {
+    const phase = debatePhases.get(debateId);
+    if (!phase) return;
+    
+    // Clear existing timer
+    if (phase.timer) {
+        clearTimeout(phase.timer);
+        phase.timer = null;
+    }
+    
+    phase.phase = newPhase;
+    phase.timeRemaining = duration;
+    phase.lastUpdate = Date.now();
+    
+    console.log(`🔄 Debate ${debateId} - Phase: ${newPhase}, Duration: ${duration}s, Round: ${phase.round}`);
+    
+    // Emit to Socket.IO users if io is available
+    if (io) {
+        const phaseData = {
+            phase: newPhase,
+            round: phase.round,
+            timeRemaining: duration,
+            speaker1Id: phase.speaker1Id,
+            speaker2Id: phase.speaker2Id
+        };
+        
+        // Try to emit to both participants
+        if (userSockets && userSockets.has(phase.speaker1Id)) {
+            io.to(phase.speaker1Id).emit('debate-phase-change', phaseData);
+        }
+        if (userSockets && userSockets.has(phase.speaker2Id)) {
+            io.to(phase.speaker2Id).emit('debate-phase-change', phaseData);
+        }
+    }
+    
+    // Schedule next phase transition
+    if (duration > 0) {
+        phase.timer = setTimeout(() => {
+            advancePhase(debateId);
+        }, duration * 1000);
+    }
+}
+
+// Advance to next phase automatically
+function advancePhase(debateId) {
+    const phase = debatePhases.get(debateId);
+    if (!phase) return;
+    
+    switch (phase.phase) {
+        case 'speaker1':
+            transitionToPhase(debateId, 'speaker2', 30);
+            break;
+        case 'speaker2':
+            transitionToPhase(debateId, 'open', 60);
+            break;
+        case 'open':
+            transitionToPhase(debateId, 'countdown', 5);
+            break;
+        case 'countdown':
+            phase.round++;
+            transitionToPhase(debateId, 'speaker1', 30);
+            break;
+    }
+}
+
+// Get current phase for polling
+function getDebatePhase(debateId) {
+    const phase = debatePhases.get(debateId);
+    if (!phase) return null;
+    
+    // Calculate actual time remaining based on last update
+    const elapsed = Math.floor((Date.now() - phase.lastUpdate) / 1000);
+    const timeRemaining = Math.max(0, phase.timeRemaining - elapsed);
+    
+    return {
+        phase: phase.phase,
+        round: phase.round,
+        timeRemaining: timeRemaining,
+        speaker1Id: phase.speaker1Id,
+        speaker2Id: phase.speaker2Id
+    };
+}
+
+// Cleanup debate phase
+function cleanupDebatePhase(debateId) {
+    const phase = debatePhases.get(debateId);
+    if (phase && phase.timer) {
+        clearTimeout(phase.timer);
+    }
+    debatePhases.delete(debateId);
+    console.log(`🧹 Cleaned up debate phase ${debateId}`);
+}
+
+// Export the helpers
 router.storePendingSignal = storePendingSignal;
+router.initDebatePhase = initDebatePhase;
+router.markParticipantReady = markParticipantReady;
+router.getDebatePhase = getDebatePhase;
+router.cleanupDebatePhase = cleanupDebatePhase;
 
 // Send WebRTC offer
 router.post('/webrtc/offer', (req, res) => {
