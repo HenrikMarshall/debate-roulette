@@ -18,6 +18,23 @@ app.use(cors());
 app.use(express.json());
 
 // ============================================
+// API ROUTES - Mount the REST API
+// ============================================
+
+const apiRoutes = require('./api-routes');
+
+// Inject dependencies into API routes
+apiRoutes.setDependencies({
+    waitingUsers,
+    activeDebates,
+    userSockets,
+    io
+});
+
+// Mount API routes with /api prefix
+app.use('/api', apiRoutes);
+
+// ============================================
 // ROUTES FIRST - BEFORE express.static()
 // ============================================
 
